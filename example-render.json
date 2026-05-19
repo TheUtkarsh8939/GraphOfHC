@@ -1,0 +1,40 @@
+{
+	"metadata": {
+		"length": 16000,
+		"breadth": 9000
+	},
+	"nodes": [
+		{
+			"id": "recIbOxgu6WIRrcI4",
+			"ysws": "Hack Club: The Game",
+			"code_url": "https://github.com/srinivasagudi0/InfinityArchitectureStudio",
+			"description": "Infinity Architecture Studio is a simple AI tool that helps turn ideas into clear software plans.\n\nIt was made for people who have a project in mind but want help shaping it into something organized, smart, and easier to build. Instead of staring at a blank page, you can describe your idea and get a strong starting point.",
+			"demo_url": "https://infinityarchitecturestudio.streamlit.app/",
+			"hours": 2,
+			"name": "InfinityArchitectureStudio",
+			"x": 2000,
+			"y": 3141,
+			"radius": 1 // log of hours spent
+		},
+		{
+			"id": "recytoadYzjunjdiv",
+			"ysws": "Campfire Satellites",
+			"code_url": "https://github.com/swiftcod3/SuperHaj",
+			"description": "a cute game where you play as a blahaj escaping your ikea captors. a small roguelike with some unique gameplay gimmicks :3",
+			"demo_url": "https://swiftcode-3.itch.io/superhaj",
+			"hours": 20,
+			"name": "SuperHaj",
+            "x": 4000,
+			"y": 4141,
+			"radius": 4.12 // log of hours spent
+		}
+	],
+	"edges": [
+		{
+			"source": "recIbOxgu6WIRrcI4",
+			"target": "recIbOxgu6W",
+			"startxy": [2000, 3141],
+            "endxy": [4000, 4141]
+		}
+	]
+}
