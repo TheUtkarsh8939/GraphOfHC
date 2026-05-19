@@ -32,7 +32,7 @@
   height: auto;
   overflow: visible;
   z-index: 1000;
-  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  font-family: sans-serif;
   font-size: 70px;
   border-bottom-left-radius: 70px;
   padding: 40px;
