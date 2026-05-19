@@ -5,7 +5,7 @@ import neo4j, { Driver, Session } from "neo4j-driver";
 
 dotenv.config();
 
-interface YswsEntry {
+interface RenderNode {
   id: string;
   ysws: string;
   code_url: string;
@@ -13,14 +13,30 @@ interface YswsEntry {
   demo_url: string;
   hours: number;
   name: string;
+  x: number;
+  y: number;
+  radius: number;
 }
 
-interface Edge {
-  id: string;
-  weight: number;
+interface RenderEdge {
+  source: string;
+  target: string;
+  weight?: number;
+  startxy?: [number, number];
+  endxy?: [number, number];
 }
 
-type Graph = Record<string, Edge[]>;
+interface RenderGraph {
+  metadata?: {
+    length?: number;
+    breadth?: number;
+    generatedAt?: string;
+    nodeCount?: number;
+    edgeCount?: number;
+  };
+  nodes: RenderNode[];
+  edges: RenderEdge[];
+}
 
 const NEO4J_URI = process.env.NEO4J_URI || "bolt://localhost:7687";
 const NEO4J_USER = process.env.NEO4J_USER || "neo4j";
@@ -47,39 +63,41 @@ const clearDatabase = async (): Promise<void> => {
   console.log("✓ Database cleared");
 };
 
-const createNodes = async (entries: YswsEntry[]): Promise<void> => {
-  console.log(`Creating ${entries.length} Project nodes...`);
+const createNodes = async (nodes: RenderNode[]): Promise<void> => {
+  console.log(`Creating ${nodes.length} Project nodes...`);
 
-  for (let i = 0; i < entries.length; i += 100) {
-    const batch = entries.slice(i, Math.min(i + 100, entries.length));
+  for (let i = 0; i < nodes.length; i += 100) {
+    const batch = nodes.slice(i, Math.min(i + 100, nodes.length));
 
     const query = `
-      UNWIND $entries AS entry
+      UNWIND $nodes AS node
       CREATE (p:Project {
-        id: entry.id,
-        ysws: entry.ysws,
-        code_url: entry.code_url,
-        description: entry.description,
-        demo_url: entry.demo_url,
-        hours: entry.hours,
-        name: entry.name
+        id: node.id,
+        ysws: node.ysws,
+        code_url: node.code_url,
+        description: node.description,
+        demo_url: node.demo_url,
+        hours: node.hours,
+        name: node.name,
+        x: node.x,
+        y: node.y,
+        radius: node.radius
       })
     `;
 
-    await session.run(query, { entries: batch });
+    await session.run(query, { nodes: batch });
 
-    const percent = (((i + batch.length) / entries.length) * 100).toFixed(2);
+    const percent = (((i + batch.length) / nodes.length) * 100).toFixed(2);
     console.log(`Progress: ${percent}%`);
   }
 
   console.log("✓ Created all nodes");
 };
 
-const createRelationships = async (graph: Graph): Promise<void> => {
-  const edges = Object.entries(graph);
-  console.log(`Creating relationships from ${edges.length} nodes...`);
+const createRelationships = async (edges: RenderEdge[]): Promise<void> => {
+  console.log(`Creating ${edges.length} relationships...`);
 
-  const totalRelationships = Object.values(graph).reduce((sum, arr) => sum + arr.length, 0);
+  const totalRelationships = edges.length;
   const relBatchSize = 7000;
   let relationshipCount = 0;
 
@@ -99,16 +117,18 @@ const createRelationships = async (graph: Graph): Promise<void> => {
 
   let relBatch: Array<{ sourceId: string; targetId: string; weight: number }> = [];
 
-  for (const [sourceId, connections] of edges) {
-    for (const edge of connections) {
-      relBatch.push({ sourceId, targetId: edge.id, weight: edge.weight });
+  for (const edge of edges) {
+    relBatch.push({
+      sourceId: edge.source,
+      targetId: edge.target,
+      weight: edge.weight ?? 1
+    });
 
-      if (relBatch.length >= relBatchSize) {
-        await session.run(query, { rels: relBatch });
-        relationshipCount += relBatch.length;
-        relBatch = [];
-        showProgress(relationshipCount);
-      }
+    if (relBatch.length >= relBatchSize) {
+      await session.run(query, { rels: relBatch });
+      relationshipCount += relBatch.length;
+      relBatch = [];
+      showProgress(relationshipCount);
     }
   }
 
@@ -132,22 +152,18 @@ const main = async (): Promise<void> => {
     await connect();
 
     // Load data
-    const entriesPath = path.join(__dirname, "ysws_entries.json");
-    const graphPath = path.join(__dirname, "..", "generated", "render-graph.json");
-
-    const entriesRaw = fs.readFileSync(entriesPath, "utf-8");
-    const entries: YswsEntry[] = JSON.parse(entriesRaw);
+    const graphPath = path.join(__dirname, "render-graph.json");
 
     const graphRaw = fs.readFileSync(graphPath, "utf-8");
-    const graph: Graph = JSON.parse(graphRaw);
+    const graph: RenderGraph = JSON.parse(graphRaw);
 
-    console.log(`\nLoaded ${entries.length} projects and graph`);
+    console.log(`\nLoaded ${graph.nodes.length} projects and ${graph.edges.length} edges`);
 
     // Clear and load
     await clearDatabase();
-    await createNodes(entries);
+    await createNodes(graph.nodes);
     await createIndexes();
-    await createRelationships(graph);
+    await createRelationships(graph.edges);
 
     console.log("\n✓ Neo4j database loaded successfully!");
   } catch (error) {

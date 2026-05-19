@@ -51,7 +51,8 @@ const DEFAULT_OUTPUT_PATH = path.join(process.cwd(), "static", "render-graph.jso
 const DEFAULT_WIDTH = 16000;
 const DEFAULT_HEIGHT = 9000;
 const DEFAULT_PADDING = 120;
-const DEFAULT_RADIUS_SCALE = 1;
+const DEFAULT_RADIUS_SCALE = 1.3;
+const DEFAULT_SPACING = 1.2;
 const DEFAULT_LAYOUT_MODE = "force";
 const DEFAULT_LAYOUT_ITERATIONS = 180;
 const DEFAULT_LAYOUT_SEED = 42;
@@ -87,7 +88,8 @@ const phyllotaxisLayout = (
   count: number,
   width: number,
   height: number,
-  padding: number
+  padding: number,
+  spacing: number
 ): Array<{ x: number; y: number }> => {
   if (count === 0) {
     return [];
@@ -95,7 +97,7 @@ const phyllotaxisLayout = (
 
   const usableWidth = Math.max(1, width - 2 * padding);
   const usableHeight = Math.max(1, height - 2 * padding);
-  const radiusLimit = Math.min(usableWidth, usableHeight) / 2;
+  const radiusLimit = (Math.min(usableWidth, usableHeight) / 2) * spacing;
   const centerX = width / 2;
   const centerY = height / 2;
   const goldenAngle = Math.PI * (3 - Math.sqrt(5));
@@ -130,7 +132,8 @@ const forceDirectedLayout = (
   padding: number,
   iterations: number,
   seed: number,
-  repulsionSamples: number
+  repulsionSamples: number,
+  spacing: number
 ): Map<string, { x: number; y: number }> => {
   const count = nodeIds.length;
   const result = new Map<string, { x: number; y: number }>();
@@ -182,7 +185,7 @@ const forceDirectedLayout = (
   }
 
   const area = Math.max(1, usableWidth * usableHeight);
-  const k = Math.sqrt(area / count);
+  const k = Math.sqrt(area / count) * spacing;
   const maxStep = Math.max(1, k * 0.4);
   const sampleCount = Math.max(2, Math.min(count - 1, repulsionSamples));
 
@@ -288,6 +291,7 @@ const main = (): void => {
   const height = toNumber(getArgValue("height"), DEFAULT_HEIGHT);
   const padding = toNumber(getArgValue("padding"), DEFAULT_PADDING);
   const radiusScale = toNumber(getArgValue("radiusScale"), DEFAULT_RADIUS_SCALE);
+  const spacing = Math.max(0.5, toNumber(getArgValue("spacing"), DEFAULT_SPACING));
   const layoutMode = (getArgValue("layout") ?? DEFAULT_LAYOUT_MODE).toLowerCase();
   const layoutIterations = Math.max(1, Math.floor(toNumber(getArgValue("layoutIterations"), DEFAULT_LAYOUT_ITERATIONS)));
   const layoutSeed = Math.floor(toNumber(getArgValue("layoutSeed"), DEFAULT_LAYOUT_SEED));
@@ -338,14 +342,15 @@ const main = (): void => {
           padding,
           layoutIterations,
           layoutSeed,
-          repulsionSamples
+          repulsionSamples,
+          spacing
         )
       : new Map<string, { x: number; y: number }>();
 
   const points =
     layoutMode === "force"
       ? []
-      : phyllotaxisLayout(validEntries.length, width, height, padding);
+      : phyllotaxisLayout(validEntries.length, width, height, padding, spacing);
 
   const nodeById = new Map<string, RenderNode>();
   const nodes: RenderNode[] = validEntries.map((entry, index) => {

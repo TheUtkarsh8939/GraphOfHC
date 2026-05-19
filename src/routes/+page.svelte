@@ -1,8 +1,8 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
     import NodeOverlay from '$lib/NodeOverlay.svelte';
-    let colorlist = [
-        '#f94144', '#f3722c', '#f8961e', '#f9844a', '#f9c74f',
+        let colorlist = [
+        '#f94144', '#fa2bbc', '#c0db11', '#f9844a', '#f9c74f',
         '#90be6d', '#43aa8b', '#4d908e', '#577590', '#277da1',
         "#af0020", "#f2efe0", "#7fefbd","#cba135", "#f78fb3", "#e056fd", "#686de0", "#ff6b81", "#ff9ff3", "#f368e0",
     ];
@@ -41,7 +41,7 @@
     let height = 0;
 
     let scale = 10;
-    const minScale = 0.05;
+    const minScale = 0.5;
     const maxScale = 6;
 
     let offsetX = 0; // world translation
@@ -347,9 +347,7 @@
 
 <canvas bind:this={canvas} id="myCanvas" style="background:#000020; display:block"></canvas>
 
-{#if $hoveredNode}
     <NodeOverlay hoveredNode={$hoveredNode} x={$hoverScreenX} y={$hoverScreenY} />
-{/if}
 
 <style>
 *{

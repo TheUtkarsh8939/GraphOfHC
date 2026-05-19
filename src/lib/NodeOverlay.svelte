@@ -3,12 +3,20 @@
   const props = $props();
 </script>
 
-<div class="node-overlay" style="left: {props.x + 12}px; top: {props.y + 12}px; position: fixed; pointer-events: auto; font-size:70px;">
-  <div class="node-title">{props.hoveredNode?.name}</div>
+<div class="node-overlay" style="right: {12}px; top: { 12}px; position: fixed; pointer-events: auto; font-size:70px; ">
+  <div class="flex gap-5 items-center">
+    <div class="node-title">{props.hoveredNode?.name}</div>
   <div class="node-sub">{props.hoveredNode?.ysws}</div>
+  </div>
   <div class="node-hours">Hours: {props.hoveredNode?.hours}</div>
   {#if props.hoveredNode?.description}
     <div class="node-desc">{props.hoveredNode.description}</div>
+  {/if}
+    {#if props.hoveredNode?.code_url}
+    <div class="node-desc">Code: {props.hoveredNode.code_url}</div>
+  {/if}
+      {#if props.hoveredNode?.demo_url}
+    <div class="node-desc">Demo: {props.hoveredNode.demo_url}</div>
   {/if}
 </div>
 
@@ -19,12 +27,18 @@
   padding: 10px;
   border-radius: 6px;
   pointer-events: none;
-  max-width: 1400px;
+  min-width: clamp(200px, 30vw, 4400px);
+  min-height: clamp(100px, 20vh, 2000px);
   height: auto;
   overflow: visible;
   z-index: 1000;
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
   font-size: 70px;
+  border-bottom-left-radius: 70px;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap:20px;
  }
 
  .node-title {
@@ -47,7 +61,7 @@
  .node-desc {
   font-size: 50px;
   color: #bcd9ff;
-  max-height: 5.5em;
+
   overflow: hidden;
  }
 </style>
