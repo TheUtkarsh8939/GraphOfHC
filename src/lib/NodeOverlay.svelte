@@ -233,7 +233,15 @@
 		{@html props.hoveredNode?.description || DOMPurify.sanitize(defaultDescription)}
 	</div>
 	<div class="border-t border-gray-500 px-4 flex items-center w-full h-10 text-gray-500">
-		Made with ❤️ by &nbsp; <a href="https://theutkarsh8939.dev" class="text-gray-500">Utkarsh</a>
+		{#if props.hoveredNode?.code_url}
+      <a href={props.hoveredNode.code_url} target="_blank" class="underline mr-4">Code</a>
+    {/if}
+    {#if props.hoveredNode?.demo_url}
+      <a href={props.hoveredNode.demo_url} target="_blank" class="underline">Demo</a>
+    {/if}
+    {#if !props.hoveredNode?.code_url && !props.hoveredNode?.demo_url}
+      Made with ❤️ by &nbsp; <a href="https://theutkarsh8939.dev" class="text-gray-500">Utkarsh</a>
+    {/if}
 	</div>
 	<!-- <div class="flex gap-2 items-center"> -->
 	<!-- <div class="node-title">{props.hoveredNode?.name}</div>

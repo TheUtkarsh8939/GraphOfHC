@@ -67,9 +67,9 @@
 
     const LOD_EDGE_MAP = [
         { scale: 1.0, edges: 5, hoursThreshold: 60 },
-        { scale: 1.6, edges: 20, hoursThreshold: 20 },
+        { scale: 1.2, edges: 20, hoursThreshold: 20 },
         { scale: 2.5, edges: 50, hoursThreshold: 4 },
-        { scale: 3, edges: 50, hoursThreshold: 0 },
+        { scale: 3.2, edges: 50, hoursThreshold: 0 },
 
         { scale: Infinity, edges: 100, hoursThreshold: 0 }
     ];
@@ -269,14 +269,19 @@
         if (raf) cancelAnimationFrame(raf);
         raf = requestAnimationFrame(() => draw());
     };
-
+    let mobileDevice = $state(false);
     onMount(async () => {
         try {
             await loadRenderData();
         } catch (err) {
             console.error('Unable to load render graph data.', err);
         }
-
+        height = window.innerHeight;
+        width = window.innerWidth;
+        if(height>width){
+            console.log("Mobile Device Detected: Adjusting node sizes for better visibility");
+            mobileDevice = true
+        }
         if (!canvas) return;
         const canvasEl = canvas;
         ctx = canvasEl.getContext('2d');
@@ -287,7 +292,7 @@
             const fitScale = Math.min(width / boundsWidth, height / boundsHeight);
             minScale = fitScale;
 
-            scale = minScale;
+            scale = minScale+0.05;
             const extraX = width / scale - boundsWidth;
             const extraY = height / scale - boundsHeight;
             offsetX = -worldBounds.minX + extraX / 2;
