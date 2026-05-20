@@ -1,20 +1,78 @@
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
     import NodeOverlay from '$lib/NodeOverlay.svelte';
-        let colorlist = [
-        '#f94144', '#fa2bbc', '#c0db11', '#f9844a', '#f9c74f',
-        '#90be6d', '#43aa8b', '#4d908e', '#577590', '#277da1',
-        "#af0020", "#f2efe0", "#7fefbd","#cba135", "#f78fb3", "#e056fd", "#686de0", "#ff6b81", "#ff9ff3", "#f368e0",  "#FF5733", "#33FF57", "#3357FF", "#F033FF", "#33FFF0", 
-  "#FF3333", "#33FF85", "#5733FF", "#FFC300", "#C70039", 
-  "#900C3F", "#581845", "#2C3E50", "#85929E", "#1ABC9C", 
-  "#16A085", "#2ECC71", "#27AE60", "#3498DB", "#2980B9", 
-  "#9B59B6", "#8E44AD", "#34495E", "#2C3E50", "#F1C40F", 
-  "#F39C12", "#E67E22", "#D35400", "#E74C3C", "#C0392B", 
-  "#ECF0F1", "#BDC3C7", "#95A5A6", "#7F8C8D", "#FFFFFF", 
-  "#00ff23", "#D4AC0D", "#7D6608", "#117864", "#0E6251", 
-  "#1A5276", "#154360", "#512E5F", "#4A235A", "#7B241C", 
-  "#78281F", "#6E2C00", "#626567", "#4D5656", "#273746"
-    ];
+	let colorlist = [
+		'#f94144',
+		'#fa2bbc',
+		'#c0db11',
+		'#f9844a',
+		'#f9c74f',
+		'#90be6d',
+		'#43aa8b',
+		'#4d908e',
+		'#8E44AD',
+		'#277da1',
+		'#af0020',
+		'#f2efe0',
+		'#7fefbd',
+		'#cba135',
+		'#f78fb3',
+		'#e056fd',
+		'#686de0',
+		'#ff6b81',
+		'#ff9ff3',
+		'#f368e0',
+		'#FF5733',
+		'#33FF57',
+		'#3357FF',
+		'#F033FF',
+		'#33FFF0',
+		'#FF3333',
+		'#33FF85',
+		'#577590',
+		'#5733FF',
+		'#FFC300',
+		'#C70039',
+		'#900C3F',
+		'#581845',
+		'#2C3E50',
+		'#2C3E50',
+		'#85929E',
+		'#1ABC9C',
+		'#16A085',
+		'#2ECC71',
+		'#27AE60',
+		'#9B59B6',
+		'#3498DB',
+		'#2980B9',
+		'#D35400',
+		'#34495E',
+		'#F1C40F',
+		'#E67E22',
+		'#0E6251',
+		'#E74C3C',
+		'#C0392B',
+		'#7F8C8D',
+		'#ECF0F1',
+		'#FFFFFF',
+		'#00ff23',
+		'#BDC3C7',
+		'#95A5A6',
+		'#6E2C00',
+		'#F39C12',
+		'#7D6608',
+		'#117864',
+		'#D4AC0D',
+		'#1A5276',
+		'#154360',
+		'#512E5F',
+		'#4A235A',
+		'#7B241C',
+		'#78281F',
+		'#4D5656',
+		'#626567',
+		'#273746'
+	];
     interface RenderNode {
         id: string;
         ysws: string;
@@ -164,7 +222,7 @@
         const visibleNodes = new Set<string>();
         const screenPosByNode = new Map<string, [number, number]>();
         for (const n of nodes) {
-            if (n.hours < lod.hoursThreshold) continue;
+            if (n.hours < lod.hoursThreshold || !n.hours) continue;
             const [sx, sy] = worldToScreen(n.x, n.y);
             const drawRadius = Math.max(1, n.radius) * scale * 10;
             if (
@@ -215,7 +273,7 @@
             const [sx, sy] = pos;
             const r = Math.max(1, n.radius) * scale * 10;
             ctx.beginPath();
-            ctx.fillStyle = colorlist[n.radius*10 % colorlist.length];
+            ctx.fillStyle = colorlist[n.radius*200 % colorlist.length];
             ctx.arc(sx, sy, r, 0, Math.PI * 2);
             ctx.fill();
         }
