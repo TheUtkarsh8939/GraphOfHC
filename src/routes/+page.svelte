@@ -117,7 +117,7 @@
 	let isPanning = false;
 	let lastPanX = 0;
 	let lastPanY = 0;
-
+    let lightMode = $state(false);
 	import { writable, get } from 'svelte/store';
 	const hoveredNode = writable<Node | null>(null);
 	const hoverScreenX = writable(0);
@@ -209,7 +209,7 @@
 		ctx.save();
 		ctx.scale(dpr, dpr);
 		// background
-		ctx.fillStyle = '#000000';
+		ctx.fillStyle = lightMode? '#ffffff' : '#000000';
 		ctx.fillRect(0, 0, width, height);
 
 		// determine LOD
@@ -217,7 +217,7 @@
 
 		// draw edges first (limited per-node by LOD)
 		ctx.lineWidth = Math.max(0.5, 1 * Math.min(1, scale));
-		ctx.strokeStyle = 'rgba(200,200,255,0.4)';
+		ctx.strokeStyle = lightMode? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.3)';
 
 		const visibleNodes = new Set<string>();
 		const screenPosByNode = new Map<string, [number, number]>();
@@ -283,12 +283,12 @@
 		if (hovered) {
 			const [hsx, hsy] = worldToScreen(hovered.x, hovered.y);
 			ctx.beginPath();
-			ctx.fillStyle = 'rgba(255,240,200,0.98)';
+			ctx.fillStyle = lightMode? 'rgba(0,0,0,0.98)' : 'rgba(255,240,200,0.98)';
 			ctx.arc(hsx, hsy, Math.max(6, hovered.radius * scale * 10 * 1.6), 0, Math.PI * 2);
 			ctx.fill();
 
 			// draw all incident edges for hovered node (and render neighbor nodes even if normally culled)
-			ctx.strokeStyle = 'rgba(255,200,120,0.95)';
+			ctx.strokeStyle = lightMode? 'rgba(0,0,0,0.95)' : 'rgba(255,200,120,0.95)';
 			ctx.lineWidth = Math.max(1, 1.5 * Math.min(2, scale));
 			const neighbors = adjacency.get(hovered.id) ?? [];
 			for (const nei of neighbors) {
@@ -454,12 +454,16 @@
 			if (raf) cancelAnimationFrame(raf);
 		});
 	});
+    function toggleLightMode() {
+        lightMode = !lightMode;
+        scheduleDraw();
+    }
 </script>
 
 <canvas bind:this={canvas} id="myCanvas" style="background:#000000; display:block"></canvas>
 
-<NodeOverlay hoveredNode={$hoveredNode} />
-<div class="bottom-5 absolute w-full flex items-center justify-center text-gray-400">
+<NodeOverlay hoveredNode={$hoveredNode} lightMode={lightMode} toggleLightMode={toggleLightMode}/>
+<div class="bottom-5 absolute w-full flex items-center justify-center text-gray-400 ">
     <div class="controls h-10 items-center gap-2 flex ">
 	<svg
         class="size-[clamp(20px,2vw,40px)]"

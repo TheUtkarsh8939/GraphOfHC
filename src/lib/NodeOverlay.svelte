@@ -209,11 +209,11 @@
 </script>
 
 <div
-	class="node-overlay w-3/5 min-w-80 max-w-220 bg-[#000000f0] border border-gray-700 text-white"
+	class="node-overlay w-3/5 min-w-80 max-w-220 {props.lightMode? 'bg-[#fffffff0]': "bg-[#000000f0]"} border border-gray-700 {props.lightMode? 'text-black': 'text-gray-300'} rounded-lg pointer-events-none  "
 	style="right: 40px; top: 12px; position: fixed; pointer-events: auto; "
 >
 	<div
-		class="w-full h-14 border-b border-gray-500 bg-black flex items-center px-4 text-clamp(16px, 1.5vw, 24px)
+		class="w-full h-14 border-b border-gray-500 {props.lightMode? 'bg-[#ffffff]': 'bg-[#000000]'} flex items-center px-4 text-clamp(16px, 1.5vw, 24px)
 "
 	>
 		{props.hoveredNode?.name || 'Graph Of Hack Club'}
@@ -229,10 +229,13 @@
       Hours: {props.hoveredNode?.hours || "∞"}
     </div>
 	</div>
-	<div class="description px-4 py-6 min-h-50 max-h-50 overflow-hidden text-clamp(12px, 1.2vw, 16px) text-gray-300">
+	<div class="description px-4 py-6 min-h-50 max-h-50 overflow-hidden text-clamp(12px, 1.2vw, 16px) {props.lightMode? 'text-black': 'text-gray-300'}">
 		{@html props.hoveredNode?.description || DOMPurify.sanitize(defaultDescription)}
 	</div>
 	<div class="border-t border-gray-500 px-4 flex items-center w-full h-10 text-gray-500">
+    <button onclick={props.toggleLightMode} class="underline mr-4">
+      {props.lightMode ? 'Dark Mode' : 'Light Mode'}
+    </button>
 		{#if props.hoveredNode?.code_url}
       <a href={props.hoveredNode.code_url} target="_blank" class="underline mr-4">Code</a>
     {/if}
@@ -243,20 +246,7 @@
       Made with ❤️ by &nbsp; <a href="https://theutkarsh8939.dev" class="text-gray-500">Utkarsh</a>
     {/if}
 	</div>
-	<!-- <div class="flex gap-2 items-center"> -->
-	<!-- <div class="node-title">{props.hoveredNode?.name}</div>
-  <div class="node-sub">{props.hoveredNode?.ysws}</div>
-  </div>
-  <div class="node-hours">Hours: {props.hoveredNode?.hours}</div>
-  {#if props.hoveredNode?.description}
-    <div class="node-desc">{props.hoveredNode.description}</div>
-  {/if}
-    {#if props.hoveredNode?.code_url}
-    <div class="node-desc">Code: {props.hoveredNode.code_url}</div>
-  {/if}
-      {#if props.hoveredNode?.demo_url}
-    <div class="node-desc">Demo: {props.hoveredNode.demo_url}</div>
-  {/if} -->
+
 </div>
 
 <style>
