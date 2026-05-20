@@ -1,11 +1,26 @@
 <script lang="ts">
+
+import DOMPurify from "dompurify";
   // Use $props() for runes mode instead of `export let`
   const props = $props();
+  const defaultDescription =  `A graph of all projects ever submitted to Hackclub's Unified Database, 
+  each circle here represents a project, and the lines between them represent sharedness. 
+  Hover on a node to see more information about the project, and click on the edges to see how projects are related. `;
+  
 </script>
 
-<div class="node-overlay" style="right: {12}px; top: { 12}px; position: fixed; pointer-events: auto; font-size:70px; ">
-  <div class="flex gap-5 items-center">
-    <div class="node-title">{props.hoveredNode?.name}</div>
+<div class="node-overlay  w-2/5 min-w-50  bg-[#000000d0] border border-gray-700 text-white" style="right: 40px; top: 12px; position: fixed; pointer-events: auto; ">
+<div class="w-full h-14 border-b border-gray-500 bg-black flex items-center px-4 text-2xl
+">{props.hoveredNode?.name || "Graph Of Hack Club"} <div class="badge">{props.hoveredNode?.ysws}</div></div>
+<div class="description px-4 py-6 min-h-50 text-md">
+  {@html props.hoveredNode?.description || DOMPurify.sanitize(defaultDescription)}
+  
+</div>
+<div class="border-t border-gray-500 px-4 flex items-center w-full h-10 text-gray-500">
+  Made with ❤️ by &nbsp; <a href="https://theutkarsh8939.dev" class="text-gray-500">Utkarsh</a>
+</div>
+  <!-- <div class="flex gap-2 items-center"> -->
+    <!-- <div class="node-title">{props.hoveredNode?.name}</div>
   <div class="node-sub">{props.hoveredNode?.ysws}</div>
   </div>
   <div class="node-hours">Hours: {props.hoveredNode?.hours}</div>
@@ -17,51 +32,9 @@
   {/if}
       {#if props.hoveredNode?.demo_url}
     <div class="node-desc">Demo: {props.hoveredNode.demo_url}</div>
-  {/if}
+  {/if} -->
 </div>
 
 <style>
- .node-overlay {
-  background: rgba(0, 0, 0, 0.9);
-  color: #e6f0ff;
-  padding: 10px;
-  border-radius: 6px;
-  pointer-events: none;
-  min-width: clamp(200px, 30vw, 4400px);
-  min-height: clamp(100px, 20vh, 2000px);
-  height: auto;
-  overflow: visible;
-  z-index: 1000;
-  font-family: sans-serif;
-  font-size: 70px;
-  border-bottom-left-radius: 70px;
-  padding: 40px;
-  display: flex;
-  flex-direction: column;
-  gap:20px;
- }
-
- .node-title {
-  font-weight: 600;
-  margin-bottom: 6px;
- }
-
- .node-sub {
-  opacity: 0.95;
-  margin-bottom: 6px;
-  font-size: 65px;
- }
-
- .node-hours {
-  font-size: 50px;
-  color: #cfe6ff;
-  margin-bottom: 6px;
- }
-
- .node-desc {
-  font-size: 50px;
-  color: #bcd9ff;
-
-  overflow: hidden;
- }
+  
 </style>

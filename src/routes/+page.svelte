@@ -4,7 +4,16 @@
         let colorlist = [
         '#f94144', '#fa2bbc', '#c0db11', '#f9844a', '#f9c74f',
         '#90be6d', '#43aa8b', '#4d908e', '#577590', '#277da1',
-        "#af0020", "#f2efe0", "#7fefbd","#cba135", "#f78fb3", "#e056fd", "#686de0", "#ff6b81", "#ff9ff3", "#f368e0",
+        "#af0020", "#f2efe0", "#7fefbd","#cba135", "#f78fb3", "#e056fd", "#686de0", "#ff6b81", "#ff9ff3", "#f368e0",  "#FF5733", "#33FF57", "#3357FF", "#F033FF", "#33FFF0", 
+  "#FF3333", "#33FF85", "#5733FF", "#FFC300", "#C70039", 
+  "#900C3F", "#581845", "#2C3E50", "#85929E", "#1ABC9C", 
+  "#16A085", "#2ECC71", "#27AE60", "#3498DB", "#2980B9", 
+  "#9B59B6", "#8E44AD", "#34495E", "#2C3E50", "#F1C40F", 
+  "#F39C12", "#E67E22", "#D35400", "#E74C3C", "#C0392B", 
+  "#ECF0F1", "#BDC3C7", "#95A5A6", "#7F8C8D", "#FFFFFF", 
+  "#00ff23", "#D4AC0D", "#7D6608", "#117864", "#0E6251", 
+  "#1A5276", "#154360", "#512E5F", "#4A235A", "#7B241C", 
+  "#78281F", "#6E2C00", "#626567", "#4D5656", "#273746"
     ];
     interface RenderNode {
         id: string;
@@ -41,7 +50,7 @@
     let height = 0;
 
     let scale = 10;
-    const minScale = 0.5;
+    let minScale = 0.5;
     const maxScale = 6;
 
     let offsetX = 0; // world translation
@@ -80,6 +89,24 @@
     let edges: RenderEdge[] = [];
     let nodeById = new Map<string, Node>();
     let adjacency = new Map<string, Array<{ id: string; weight: number }>>();
+    let worldBounds: { minX: number; maxX: number; minY: number; maxY: number } | null = null;
+    let hasFitToScreen = false;
+
+    const computeWorldBounds = (items: Node[]) => {
+        if (items.length === 0) return null;
+        let minX = Number.POSITIVE_INFINITY;
+        let maxX = Number.NEGATIVE_INFINITY;
+        let minY = Number.POSITIVE_INFINITY;
+        let maxY = Number.NEGATIVE_INFINITY;
+        for (const n of items) {
+            const r = Math.max(1, n.radius) * 20;
+            minX = Math.min(minX, n.x - r);
+            maxX = Math.max(maxX, n.x + r);
+            minY = Math.min(minY, n.y - r);
+            maxY = Math.max(maxY, n.y + r);
+        }
+        return { minX, maxX, minY, maxY };
+    };
 
     const rebuildIndexes = () => {
         nodeById = new Map(nodes.map((n) => [n.id, n]));
@@ -105,6 +132,7 @@
         nodes = renderData.nodes;
         edges = renderData.edges;
         rebuildIndexes();
+        worldBounds = computeWorldBounds(nodes);
     };
 
     const worldToScreen = (wx: number, wy: number) => {
@@ -121,7 +149,7 @@
         ctx.save();
         ctx.scale(dpr, dpr);
         // background
-        ctx.fillStyle = '#000020';
+        ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, width, height);
 
         // determine LOD
@@ -129,7 +157,7 @@
 
         // draw edges first (limited per-node by LOD)
         ctx.lineWidth = Math.max(0.5, 1 * Math.min(1, scale));
-        ctx.strokeStyle = 'rgba(200,200,255,0.18)';
+        ctx.strokeStyle = 'rgba(200,200,255,0.4)';
 
         const visibleNodes = new Set<string>();
         const screenPosByNode = new Map<string, [number, number]>();
@@ -250,6 +278,21 @@
         if (!canvas) return;
         const canvasEl = canvas;
         ctx = canvasEl.getContext('2d');
+        const fitToScreen = () => {
+            if (!worldBounds) return;
+            const boundsWidth = Math.max(1, worldBounds.maxX - worldBounds.minX);
+            const boundsHeight = Math.max(1, worldBounds.maxY - worldBounds.minY);
+            const fitScale = Math.min(width / boundsWidth, height / boundsHeight);
+            minScale = fitScale;
+
+            scale = minScale;
+            const extraX = width / scale - boundsWidth;
+            const extraY = height / scale - boundsHeight;
+            offsetX = -worldBounds.minX + extraX / 2;
+            offsetY = -worldBounds.minY + extraY / 2;
+            hasFitToScreen = true;
+        };
+
         const resize = () => {
             const dpr = window.devicePixelRatio || 1;
             width = Math.floor(window.innerWidth);
@@ -258,6 +301,7 @@
             canvasEl.height = Math.floor(height * dpr);
             canvasEl.style.width = width + 'px';
             canvasEl.style.height = height + 'px';
+            fitToScreen();
             scheduleDraw();
         };
 
@@ -345,9 +389,9 @@
     });
 </script>
 
-<canvas bind:this={canvas} id="myCanvas" style="background:#000020; display:block"></canvas>
+<canvas bind:this={canvas} id="myCanvas" style="background:#000000; display:block"></canvas>
 
-    <NodeOverlay hoveredNode={$hoveredNode} x={$hoverScreenX} y={$hoverScreenY} />
+    <NodeOverlay hoveredNode={$hoveredNode}  />
 
 <style>
 *{
@@ -365,16 +409,5 @@
         cursor: grabbing;
     }
 
-    :global(.node-overlay) {
-        position: fixed;
-        pointer-events: none;
-        transform: translate(12px, 12px);
-        background: rgba(12, 16, 32, 0.95);
-        color: #e6f0ff;
-        border-radius: 8px;
-        padding: 10px;
-        max-width: 560px;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.6);
-        border: 1px solid rgba(255,255,255,0.04);
-    }
+
 </style>

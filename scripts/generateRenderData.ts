@@ -133,7 +133,8 @@ const forceDirectedLayout = (
   iterations: number,
   seed: number,
   repulsionSamples: number,
-  spacing: number
+  spacing: number,
+  edgePull: number
 ): Map<string, { x: number; y: number }> => {
   const count = nodeIds.length;
   const result = new Map<string, { x: number; y: number }>();
@@ -248,14 +249,19 @@ const forceDirectedLayout = (
       dispY[edge.b] += uy * pull;
     }
 
-    // Weak gravity toward center, stronger for low-degree nodes.
-    const centerPull = 0.0025;
+    // Outward gravity that grows toward edges to fight center clumping.
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const maxRadius = Math.max(1, Math.min(usableWidth, usableHeight) / 2);
+    const tunedEdgePull = edgePull;
     for (let i = 0; i < count; i += 1) {
-      const dx = width / 2 - positions[i].x;
-      const dy = height / 2 - positions[i].y;
-      const degreeFactor = 1 / (1 + weightedDegrees[i]);
-      dispX[i] += dx * centerPull * degreeFactor;
-      dispY[i] += dy * centerPull * degreeFactor;
+      const dx = positions[i].x - centerX;
+      const dy = positions[i].y - centerY;
+      const dist = Math.max(0.001, Math.sqrt(dx * dx + dy * dy));
+      const normalized = clamp(dist / maxRadius, 0, 1);
+      const force = tunedEdgePull * normalized * normalized;
+      dispX[i] += (dx / dist) * force;
+      dispY[i] += (dy / dist) * force;
     }
 
     const progress = iter / Math.max(1, iterations - 1);
@@ -299,6 +305,7 @@ const main = (): void => {
     2,
     Math.floor(toNumber(getArgValue("repulsionSamples"), DEFAULT_REPULSION_SAMPLES))
   );
+  const edgePull = Math.max(0, toNumber(getArgValue("edgePull"), 0.0035));
   const maxNeighbors = Math.max(1, Math.floor(toNumber(getArgValue("maxNeighbors"), 20)));
 
   if (width <= 0 || height <= 0) {
@@ -343,7 +350,8 @@ const main = (): void => {
           layoutIterations,
           layoutSeed,
           repulsionSamples,
-          spacing
+          spacing,
+          edgePull
         )
       : new Map<string, { x: number; y: number }>();
 

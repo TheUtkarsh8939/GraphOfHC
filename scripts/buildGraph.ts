@@ -1,9 +1,17 @@
 import * as fs from "fs";
 import * as path from "path";
+import os from "os";
+import { Worker } from "worker_threads";
 
 interface EmbeddingRecord {
   id: string;
   embedding: number[];
+}
+
+interface LoadedEmbeddings {
+  ids: string[];
+  vectors: number[][];
+  dimension: number;
 }
 
 interface Edge {
@@ -15,6 +23,8 @@ type Graph = Record<string, Edge[]>;
 
 const DEFAULT_THRESHOLD = 0.5;
 const DEFAULT_MAX_NEIGHBORS = 20;
+const DEFAULT_CONCURRENCY = Math.max(1, Math.min(6, os.cpus().length));
+const DEFAULT_CHUNK_SIZE = 250;
 
 const getArgValue = (name: string): string | undefined => {
   const prefix = `--${name}=`;
@@ -47,9 +57,173 @@ const dot = (a: number[], b: number[]): number => {
   return total;
 };
 
-const main = (): void => {
+const readLargeJsonArray = async (filePath: string): Promise<EmbeddingRecord[]> => {
+  const records: EmbeddingRecord[] = [];
+  const stream = fs.createReadStream(filePath, { encoding: "utf-8" });
+
+  let buffer = "";
+  let scanIndex = 0;
+  let objectStart = -1;
+  let arrayStarted = false;
+  let inString = false;
+  let escaped = false;
+  let depth = 0;
+
+  const parseCompletedObject = (objectText: string): void => {
+    const record = JSON.parse(objectText) as EmbeddingRecord;
+    records.push(record);
+  };
+
+  for await (const chunk of stream) {
+    buffer += chunk;
+
+    while (scanIndex < buffer.length) {
+      const char = buffer[scanIndex];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (char === "\\") {
+          escaped = true;
+        } else if (char === '"') {
+          inString = false;
+        }
+
+        scanIndex += 1;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+        scanIndex += 1;
+        continue;
+      }
+
+      if (char === "[") {
+        arrayStarted = true;
+        scanIndex += 1;
+        continue;
+      }
+
+      if (!arrayStarted) {
+        scanIndex += 1;
+        continue;
+      }
+
+      if (char === "{") {
+        if (depth === 0) {
+          objectStart = scanIndex;
+        }
+        depth += 1;
+        scanIndex += 1;
+        continue;
+      }
+
+      if (char === "}") {
+        depth -= 1;
+        scanIndex += 1;
+
+        if (depth === 0 && objectStart !== -1) {
+          const objectText = buffer.slice(objectStart, scanIndex);
+          parseCompletedObject(objectText);
+
+          buffer = buffer.slice(scanIndex);
+          scanIndex = 0;
+          objectStart = -1;
+        }
+
+        continue;
+      }
+
+      scanIndex += 1;
+    }
+  }
+
+  return records;
+};
+
+const loadEmbeddings = async (inputPath: string): Promise<LoadedEmbeddings> => {
+  const records = await readLargeJsonArray(inputPath);
+
+  if (records.length === 0) {
+    return { ids: [], vectors: [], dimension: 0 };
+  }
+
+  const dimension = records[0].embedding.length;
+  const ids: string[] = [];
+  const vectors: number[][] = [];
+
+  for (const record of records) {
+    if (record.embedding.length !== dimension) {
+      throw new Error("Embedding dimensions are inconsistent in the input file.");
+    }
+
+    ids.push(record.id);
+    vectors.push(normalize(record.embedding));
+  }
+
+  return { ids, vectors, dimension };
+};
+
+const runWithConcurrency = async <T>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<void>
+): Promise<void> => {
+  let nextIndex = 0;
+
+  const runWorker = async (): Promise<void> => {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      await worker(items[currentIndex], currentIndex);
+    }
+  };
+
+  const workerCount = Math.min(concurrency, items.length);
+  await Promise.all(Array.from({ length: workerCount }, () => runWorker()));
+};
+
+const createWorkerSource = (): string => `
+  const { parentPort, workerData } = require("worker_threads");
+
+  const dot = (sharedVectors, dimension, aIndex, bIndex) => {
+    let total = 0;
+    const offsetA = aIndex * dimension;
+    const offsetB = bIndex * dimension;
+
+    for (let i = 0; i < dimension; i += 1) {
+      total += sharedVectors[offsetA + i] * sharedVectors[offsetB + i];
+    }
+    return total;
+  };
+
+  const sharedVectors = new Float32Array(workerData.sharedBuffer);
+  const candidates = [];
+  let comparisons = 0;
+
+  for (let i = workerData.startIndex; i < workerData.endIndex; i += 1) {
+    for (let j = i + 1; j < workerData.total; j += 1) {
+      const similarity = dot(sharedVectors, workerData.dimension, i, j);
+      if (similarity >= workerData.threshold) {
+        candidates.push({ i, j, weight: similarity });
+      }
+      comparisons += 1;
+    }
+
+    if (parentPort && (i + 1) % workerData.progressStep === 0) {
+      parentPort.postMessage({ type: "progress", workerIndex: workerData.workerIndex, processed: i + 1 - workerData.startIndex });
+    }
+  }
+
+  parentPort.postMessage({ type: "result", candidates, comparisons });
+`;
+
+const main = async (): Promise<void> => {
   const threshold = toNumber(getArgValue("threshold"), DEFAULT_THRESHOLD);
   const maxNeighbors = Math.max(1, Math.floor(toNumber(getArgValue("maxNeighbors"), DEFAULT_MAX_NEIGHBORS)));
+  const concurrency = Math.max(1, Math.floor(toNumber(getArgValue("concurrency"), DEFAULT_CONCURRENCY)));
+  const chunkSize = Math.max(1, Math.floor(toNumber(getArgValue("chunkSize"), DEFAULT_CHUNK_SIZE)));
   const inputPath = getArgValue("input") ?? path.join(__dirname, "../generated/embeddings.json");
   const outputPath = getArgValue("output") ?? path.join(__dirname, "../generated/graph.json");
 
@@ -58,41 +232,96 @@ const main = (): void => {
     process.exit(1);
   }
 
-  const raw = fs.readFileSync(inputPath, "utf-8");
-  const records: EmbeddingRecord[] = JSON.parse(raw);
-  const total = records.length;
+  const { ids, vectors, dimension } = await loadEmbeddings(inputPath);
+  const total = ids.length;
 
   if (total === 0) {
     console.error("No embeddings found in input file.");
     process.exit(1);
   }
 
-  const ids = records.map((record) => record.id);
-  const vectors = records.map((record) => normalize(record.embedding));
+  const sharedBuffer = new SharedArrayBuffer(Float32Array.BYTES_PER_ELEMENT * total * dimension);
+  const sharedVectors = new Float32Array(sharedBuffer);
+
+  for (let index = 0; index < vectors.length; index += 1) {
+    sharedVectors.set(vectors[index], index * dimension);
+  }
 
   const graph: Graph = {};
   for (const id of ids) graph[id] = [];
 
-  // Keep only one candidate per pair (i < j) for later capped selection.
-  const candidates: Array<{ a: string; b: string; weight: number }> = [];
+  // Split the outer loop into chunks and process them concurrently in workers.
+  const rowRanges: Array<{ startIndex: number; endIndex: number }> = [];
+  for (let startIndex = 0; startIndex < total; startIndex += chunkSize) {
+    rowRanges.push({
+      startIndex,
+      endIndex: Math.min(startIndex + chunkSize, total),
+    });
+  }
 
+  const candidates: Array<{ a: string; b: string; weight: number }> = [];
   let comparisons = 0;
   const totalComparisons = (total * (total - 1)) / 2;
 
-  for (let i = 0; i < total; i += 1) {
-    for (let j = i + 1; j < total; j += 1) {
-      const similarity = dot(vectors[i], vectors[j]);
-      if (similarity >= threshold) {
-        candidates.push({ a: ids[i], b: ids[j], weight: similarity });
-      }
-      comparisons += 1;
-    }
+  const progressStep = Math.max(1, Math.floor(chunkSize / 2));
+  const workerSource = createWorkerSource();
 
-    if ((i + 1) % 250 === 0 || i + 1 === total) {
-      const percent = ((comparisons / totalComparisons) * 100).toFixed(2);
-      console.log(`Progress: ${percent}% (${comparisons}/${totalComparisons})`);
+  await runWithConcurrency(rowRanges, concurrency, async (range, rangeIndex) => {
+    console.log(
+      `Processing chunk ${rangeIndex + 1}/${rowRanges.length} (rows ${range.startIndex + 1} to ${range.endIndex})`
+    );
+
+    const result = await new Promise<{ candidates: Array<{ a: string; b: string; weight: number }>; comparisons: number }>((resolve, reject) => {
+      const worker = new Worker(workerSource, {
+        eval: true,
+        workerData: {
+          startIndex: range.startIndex,
+          endIndex: range.endIndex,
+          threshold,
+          workerIndex: rangeIndex,
+          progressStep,
+          total,
+          dimension,
+          sharedBuffer,
+        },
+      });
+
+      worker.on("message", (message) => {
+        if (message?.type === "result") {
+          resolve({
+            candidates: (message.candidates ?? []).map((candidate: { i: number; j: number; weight: number }) => ({
+              a: ids[candidate.i],
+              b: ids[candidate.j],
+              weight: candidate.weight,
+            })),
+            comparisons: message.comparisons ?? 0,
+          });
+          return;
+        }
+
+        if (message?.type === "progress") {
+          const completed = range.startIndex + (message.processed ?? 0);
+          const percent = ((completed / total) * 100).toFixed(2);
+          console.log(`Progress: ${percent}% (${completed}/${total})`);
+        }
+      });
+
+      worker.on("error", reject);
+      worker.on("exit", (code) => {
+        if (code !== 0) {
+          reject(new Error(`Worker exited with code ${code}`));
+        }
+      });
+    });
+
+    for (const candidate of result.candidates) {
+      candidates.push(candidate);
     }
-  }
+    comparisons += result.comparisons;
+    const percent = ((comparisons / totalComparisons) * 100).toFixed(2);
+    console.log(`Progress: ${percent}% (${comparisons}/${totalComparisons})`);
+    console.log(`✓ Completed chunk ${rangeIndex + 1}/${rowRanges.length}`);
+  });
 
   // Strongest edges first: this preserves the most relevant relationships under the cap.
   candidates.sort((x, y) => y.weight - x.weight);

@@ -15,7 +15,7 @@ const extractNameFromCodeUrl = (codeUrl: string): string => {
     return urlParts[urlParts.length - 1]
 }
 const main = async () => {
-    const response = await fetch("https://ships.hackclub.com/api/v1/ysws_entries")
+    const response = await fetch("https://ships.hackclub.com/api/v1/ysws_entries?all=true")
     const data = await response.json()
     const filteredData: YswsEntry[] = []
     let codeURLs: string[] = [] 
