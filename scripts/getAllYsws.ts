@@ -22,13 +22,13 @@ async function main() {
     for (const entry of yswsEntries) {
         ysws.add(entry.ysws);
     }
-    const map = new Map<string, string>();
+    const map: Record<string, string> = {};
     console.log(`Got ${ysws.size} unique ysws`);
     for (const ysw of ysws) {
-        map.set(ysw, "#000000");
+        map[ysw] = "#000000";
     }
-    // Save the ysws to a file called all_ysws.txt, one per line
-    const outputPath = path.join(__dirname, "..", "generated", "all_ysws.txt");
+    // Save the ysws to a file called all_ysws.json
+    const outputPath = path.join(__dirname, "..", "generated", "all_ysws.json");
     fs.writeFileSync(outputPath, JSON.stringify(map), "utf-8");
     console.log(`Saved all ysws to ${outputPath}`);
 }
