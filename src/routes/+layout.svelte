@@ -11,6 +11,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
+	<script src="https://kit.fontawesome.com/137fbb16b5.js" crossorigin="anonymous"></script>
 </svelte:head>
 {#if isMobile}
 <div class="w-screen h-screen text-white bg-black absolute z-10 flex flex-col items-center justify-center text-center">This Site is Not made for mobile <br> <button class="underline" onclick={()=>isMobile=false}>Continue Anyways?</button> </div>
