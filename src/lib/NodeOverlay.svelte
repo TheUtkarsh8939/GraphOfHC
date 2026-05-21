@@ -1,211 +1,12 @@
 <script lang="ts">
-	const COLORS: Map<string, string> = JSON.parse(`{
-    "Highway": "#000040",
-    "Blueprint": "#0000b2",
-    "Boba Drops": "#909000",
-    "Milkyway": "#000000",
-    "Arcade": "#FF8C00",
-    "flavorless": "#737373",
-    "High Seas": "#0F52BA",
-    "Endpointer": "#00FF66",
-    "Siege": "#8B0000",
-    "Reactive": "#61DAFB",
-    "BakeBuild": "#D2691E",
-    "Shipwrecked": "#4A3B32",
-    "OnBoard": "#FF3366",
-    "Daydream": "#FF69B4",
-    "Summer of Making": "#E3A857",
-    "Hackaccino": "#704214",
-    "Sockathon": "#FF6B6B",
-    "Boba Olympics": "#C5A059",
-    "Low Skies": "#708090",
-    "Athena Award": "#D4AF37",
-    "Squeak": "#98FF98",
-    "Anchor": "#2F4F4F",
-    "Polygon": "#8247E5",
-    "TerminalCraft": "#107C41",
-    "The Bin": "#5A5A5A",
-    "Congressional Certification": "#1A365D",
-    "Hackpad": "#FF4500",
-    "Swirl": "#E6A8D7",
-    "Dummies V2": "#FFCC00",
-    "Flavortown": "#FF4500",
-    "Midnight": "#111827",
-    "Scrapyard": "#4B5563",
-    "Axiom": "#3B82F6",
-    "Neighborhood": "#10B981",
-    "Iframe": "#A855F7",
-    "Spatula": "#9CA3AF",
-    "twist": "#F43F5E",
-    "Prototype": "#6B7280",
-    "The Journey": "#312E81",
-    "Riceathon": "#FCD34D",
-    "CodeQuest": "#2563EB",
-    "Penumbra": "#4B4453",
-    "Waffles": "#D97706",
-    "Hackcraft Mod Edition": "#15803D",
-    "Haxmas": "#DC2626",
-    "scraps": "#6B7280",
-    "Hacklet": "#EC4899",
-    "Stasis": "#D95D39",
-    "Solder": "#475569",
-    "Parthenon": "#EAB308",
-    "Touch Grass": "#22C55E",
-    "Sprig": "#34D399",
-    "Black Box": "#18181B",
-    "Apex": "#F97316",
-    "Jumpstart V2": "#3B82F6",
-    "Jet Fund": "#06B6D4",
-    "Moonshot": "#6366F1",
-    "Shiba": "#F59E0B",
-    "Grounded": "#78350F",
-    "Resolution": "#10B981",
-    "Construct": "#4B5563",
-    "Converge": "#8B5CF6",
-    "FuseRing": "#EF4444",
-    "Smelt": "#B45309",
-    "Sleepover": "#3D6098",
-    "storyboard": "#EC4899",
-    "Accelerate": "#0EA5E9",
-    "Campfire Flagship": "#F97316",
-    "Vibes": "#F472B6",
-    "Page": "#6B7280",
-    "Toppings": "#10B981",
-    "Remix": "#8B5CF6",
-    "JPEG": "#6366F1",
-    "Picoducky": "#FBBF24",
-    "Cafe": "#78350F",
-    "Hack Club: The Game": "#EC4899",
-    "Roulette": "#DC2626",
-    "Foodie": "#F59E0B",
-    "Bauble": "#EF4444",
-    "Blot": "#000000",
-    "Counterspell": "#A855F7",
-    "Jungle": "#15803D",
-    "Juice": "#FACE15",
-    "Undercity": "#1E1B4B",
-    "meow": "#F472B6",
-    "Infill": "#6B7280",
-    "Neon": "#06B6D4",
-    "neohack": "#14B8A6",
-    "Grub": "#B45309",
-    "Carnival": "#F43F5E",
-    "Railway": "#0284C7",
-    "Gemini": "#3B82F6",
-    "Cider": "#D97706",
-    "Raspite": "#BE123C",
-    "Rewind": "#EF4444",
-    "Cargo Cult": "#1E293B",
-    "Scrapyard Flagship": "#374151",
-    "Extensify": "#6366F1",
-    "FIX IT": "#DC2626",
-    "Jumpstart V3": "#2563EB",
-    "Hackmate": "#EC4899",
-    "self-portrait": "#14B8A6",
-    "Toolsmith": "#475569",
-    "Pathfinder": "#059669",
-    "Clutter": "#6B7280",
-    "Slushies": "#38BDF8",
-    "Tinker": "#F59E0B",
-    "Reality": "#6366F1",
-    "Minus Twelve": "#1D4ED8",
-    "Fanpage": "#F472B6",
-    "Keepsake": "#EC4899",
-    "Hashcore": "#111827",
-    "Giza Game Dev Bootcamp": "#D97706",
-    "Reboot": "#10B981",
-    "Cascade": "#3B82F6",
-    "Authly": "#6366F1",
-    "wacky files": "#F59E0B",
-    "Dummies": "#FBBF24",
-    "dockerize": "#1D63ED",
-    "Portal-Vr": "#A855F7",
-    "decode": "#10B981",
-    "Emerge": "#6366F1",
-    "Pixeldust": "#E9D5FF",
-    "Ham Club": "#EF4444",
-    "Hack Berry": "#9333EA",
-    "Birthday Cards": "#F472B6",
-    "Thunder": "#FACE15",
-    "Fudge": "#78350F",
-    "Optimize": "#10B981",
-    "Inkling": "#475569",
-    "BrowserBuddy": "#3B82F6",
-    "Cargo Cult v2": "#0F172A",
-    "Dessert": "#F472B6",
-    "Wizard Orpheus": "#A855F7",
-    "iplace": "#10B981",
-    "10 Days In Public": "#059669",
-    "Aesthetic": "#E9D5FF",
-    "Tarot": "#4B5563",
-    "Tile": "#6B7280",
-    "This Sketch": "#475569",
-    "RaspAPI": "#BE123C",
-    "Keepsake Aurora": "#2dd4bf",
-    "Waveband": "#6366F1",
-    "Visioneer": "#3B82F6",
-    "Build Your Own LLM": "#111827",
-    "Haunted": "#312E81",
-    "Toybox": "#F59E0B",
-    "RPG": "#B45309",
-    "Jumpstart V1": "#60A5FA",
-    "10 Hours in Public": "#10B981",
-    "Silicon": "#9CA3AF",
-    "Club Dashboard": "#3B82F6",
-    "pulse": "#EF4444",
-    "Retrospect": "#4B5563",
-    "Craft": "#B45309",
-    "Popcorn": "#FBBF24",
-    "Hermes": "#3B82F6",
-    "Q ": "#6B7280",
-    "Reamde": "#111827",
-    "Asylum": "#374151",
-    "cmd + k": "#1F2937",
-    "Infinity": "#6366F1",
-    "Soaked": "#2563EB",
-    "Timeless": "#4B5563",
-    "Waveform": "#8B5CF6",
-    "woof": "#F59E0B",
-    "Teach Your Machine": "#10B981",
-    "Playphone": "#F43F5E",
-    "Sidequests": "#8B5CF6",
-    "Armed": "#DC2626",
-    "Anansi": "#78350F",
-    "Gamefolio": "#10B981",
-    "Minicraft": "#15803D",
-    "Tonic": "#06B6D4",
-    "RSS": "#F97316",
-    "HackVault": "#1E1B4B",
-    "Campfire Satellites": "#F97316",
-    "Jackpot": "#5F1212",
-    "Fallout": "#38C9FF",
-    "Macondo": "#15803D",
-    "Campfire Overdrive": "#EA580C",
-    "Ember": "#EF4444",
-    "Ceiling": "#9CA3AF",
-    "Horizons": "#3B82F6",
-    "The Zoo": "#047857",
-    "Easel": "#F59E0B",
-    "beest": "#111827",
-    "Shipyard": "#0F52BA",
-    "Remixed": "#A855F7",
-    "Forge": "#B45309",
-    "Pull Quests": "#10B981",
-    "Homelab": "#475569",
-    "Hackfinger": "#EF4444",
-    "trailit": "#10B981",
-    "Reflow": "#3B82F6",
-    "Coeur": "#DC2626",
-    "Illumination": "#FACE15",
-    "Alleyway": "#374151",
-    "Overflow-Hidden": "#111827"
-}`);
+  import { COLORS } from './colors';
 	import DOMPurify from 'dompurify';
 	// Use $props() for runes mode instead of `export let`
 	const props = $props();
 	const defaultDescription = `A graph of all projects ever submitted to Hackclub's Unified Database, 
   each circle here represents a project, and the lines between them represent sharedness. 
   Hover on a node to see more information about the project, and click on the edges to see how projects are related. `;
+  let closed = $state(true);      
 </script>
 
 <div
@@ -213,10 +14,10 @@
 	style="right: 40px; top: 12px; position: fixed; pointer-events: auto; "
 >
 	<div
-		class="w-full h-14 border-b border-gray-500 {props.lightMode? 'bg-[#ffffff]': 'bg-[#000000]'} flex items-center px-4 text-clamp(16px, 1.5vw, 24px)
+		class="w-full h-14 border-b border-gray-500 {props.lightMode? 'bg-[#ffffff]': 'bg-[#000000]'} relative flex items-center px-4 text-clamp(16px, 1.5vw, 24px)
 "
 	>
-		{props.hoveredNode?.name || 'Graph Of Hack Club'}
+		{props.hoveredNode?.name || 'Constellation'}
 		<div
 			class="badge text-[clamp(8px,0.5vw,12px)] ml-4 px-[clamp(8px,0.5vw,16px)] py-1 text-white rounded-full "
 			style="background-color: color-mix({//@ts-ignore
@@ -228,14 +29,16 @@
 			COLORS[props.hoveredNode?.ysws] || '#6b7280'}, #03fcbe 40%);">
       Hours: {props.hoveredNode?.hours || "∞"}
     </div>
+    <button aria-label="Toggle description" class="text-white absolute right-4 animate {closed? '' : 'rotate-180'}" onclick={() => closed = !closed}>
+      <i class="fa-solid fa-angle-down"></i>
+    </button>
 	</div>
-	<div class="description px-4 py-6 min-h-50 max-h-50 overflow-hidden text-clamp(12px, 1.2vw, 16px) {props.lightMode? 'text-black': 'text-gray-300'}">
+<div style="height: {closed ? '0' : 'auto'} !important;opacity:{closed?'0':'1'}" class="animate">
+  	<div style=" min-height: {closed ? '0' : '200px'}; padding:{closed ? '0' : 'auto'};" class="animate description px-4 py-6  max-h-50 overflow-hidden text-clamp(12px, 1.2vw, 16px) {props.lightMode? 'text-black': 'text-gray-300'}">
 		{@html props.hoveredNode?.description || DOMPurify.sanitize(defaultDescription)}
 	</div>
 	<div class="border-t border-gray-500 px-4 flex items-center w-full h-10 text-gray-500">
-    <button onclick={props.toggleLightMode} class="underline mr-4">
-      {props.lightMode ? 'Dark Mode' : 'Light Mode'}
-    </button>
+
 		{#if props.hoveredNode?.code_url}
       <a href={props.hoveredNode.code_url} target="_blank" class="underline mr-4">Code</a>
     {/if}
@@ -246,8 +49,12 @@
       Made with ❤️ by &nbsp; <a href="https://theutkarsh8939.dev" class="text-gray-500">Utkarsh</a>
     {/if}
 	</div>
+</div>
 
 </div>
 
 <style>
+.animate{
+  transition: all 0.3s ease;
+}
 </style>

@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import NodeOverlay from '$lib/NodeOverlay.svelte';
+	let useYswsColor = $state(false);
+	let loading = $state(true);
+	import { COLORS } from '$lib/colors';
 	let colorlist = [
 		'#f94144',
 		'#fa2bbc',
@@ -117,7 +120,7 @@
 	let isPanning = false;
 	let lastPanX = 0;
 	let lastPanY = 0;
-    let lightMode = $state(false);
+	let lightMode = $state(false);
 	import { writable, get } from 'svelte/store';
 	const hoveredNode = writable<Node | null>(null);
 	const hoverScreenX = writable(0);
@@ -209,7 +212,7 @@
 		ctx.save();
 		ctx.scale(dpr, dpr);
 		// background
-		ctx.fillStyle = lightMode? '#ffffff' : '#000000';
+		ctx.fillStyle = lightMode ? '#ffffff' : '#000000';
 		ctx.fillRect(0, 0, width, height);
 
 		// determine LOD
@@ -217,7 +220,7 @@
 
 		// draw edges first (limited per-node by LOD)
 		ctx.lineWidth = Math.max(0.5, 1 * Math.min(1, scale));
-		ctx.strokeStyle = lightMode? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.3)';
+		ctx.strokeStyle = lightMode ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.3)';
 
 		const visibleNodes = new Set<string>();
 		const screenPosByNode = new Map<string, [number, number]>();
@@ -273,7 +276,7 @@
 			const [sx, sy] = pos;
 			const r = Math.max(1, n.radius) * scale * 10;
 			ctx.beginPath();
-			ctx.fillStyle = colorlist[(n.radius * 200) % colorlist.length];
+			ctx.fillStyle = useYswsColor ? COLORS[n.ysws] || '#6b7280' : colorlist[(n.radius * 200) % colorlist.length];
 			ctx.arc(sx, sy, r, 0, Math.PI * 2);
 			ctx.fill();
 		}
@@ -283,12 +286,12 @@
 		if (hovered) {
 			const [hsx, hsy] = worldToScreen(hovered.x, hovered.y);
 			ctx.beginPath();
-			ctx.fillStyle = lightMode? 'rgba(0,0,0,0.98)' : 'rgba(255,240,200,0.98)';
+			ctx.fillStyle = lightMode ? 'rgba(0,0,0,0.98)' : 'rgba(255,240,200,0.98)';
 			ctx.arc(hsx, hsy, Math.max(6, hovered.radius * scale * 10 * 1.6), 0, Math.PI * 2);
 			ctx.fill();
 
 			// draw all incident edges for hovered node (and render neighbor nodes even if normally culled)
-			ctx.strokeStyle = lightMode? 'rgba(0,0,0,0.95)' : 'rgba(255,200,120,0.95)';
+			ctx.strokeStyle = lightMode ? 'rgba(0,0,0,0.95)' : 'rgba(255,200,120,0.95)';
 			ctx.lineWidth = Math.max(1, 1.5 * Math.min(2, scale));
 			const neighbors = adjacency.get(hovered.id) ?? [];
 			for (const nei of neighbors) {
@@ -443,6 +446,7 @@
 		canvasEl.addEventListener('pointermove', onPointerMove);
 		window.addEventListener('pointerup', onPointerUp);
 
+	loading=false
 		scheduleDraw();
 
 		onDestroy(() => {
@@ -453,45 +457,86 @@
 			window.removeEventListener('pointerup', onPointerUp);
 			if (raf) cancelAnimationFrame(raf);
 		});
+
 	});
-    function toggleLightMode() {
-        lightMode = !lightMode;
-        scheduleDraw();
-    }
+	function toggleLightMode() {
+		lightMode = !lightMode;
+		scheduleDraw();
+	}
+	let closed = $state(true);
 </script>
-
-<canvas bind:this={canvas} id="myCanvas" style="background:#000000; display:block"></canvas>
-
-<NodeOverlay hoveredNode={$hoveredNode} lightMode={lightMode} toggleLightMode={toggleLightMode}/>
-<div class="bottom-5 absolute w-full flex items-center justify-center text-gray-400 ">
-    <div class="controls h-10 items-center gap-2 flex ">
-	<svg
-        class="size-[clamp(20px,2vw,40px)]"
-		version="1.1"
-		id="Capa_1"
-		xmlns="http://www.w3.org/2000/svg"
-		xmlns:xlink="http://www.w3.org/1999/xlink"
-		x="0px"
-		y="0px"
-		viewBox="0 0 416.031 416.031"
-		style="enable-background:new 0 0 416.031 416.031;"
-		xml:space="preserve"
+{#if loading}
+<div class="absolute flex items-center justify-center h-screen w-screen bg-black text-white p-0 z-500 flex-col gap-4">
+	<div class="size-20 border-3 border-gray-600 border-t-white rounded-full loader"></div>
+	<span>Loading the constellation..</span>
+</div>
+{/if}
+<canvas bind:this={canvas} id="myCanvas" style="background:{lightMode ? '#ffffff' : '#000000'}; display:block"></canvas>
+<div
+	class="filter absolute top-4 left-12 {lightMode ? 'border-black' : 'border-gray-600'} rounded-sm z-10  {lightMode
+		? 'text-gray-800'
+		: 'text-white'} cursor-pointer {lightMode ? 'bg-gray-200' : 'bg-black'}  border"
+>
+	<div
+		class="filter-bar relative h-12  items-center justify-center flex text-xl gap-2
+		{lightMode ? 'border-black' : 'border-gray-600'} border-b"
 	>
-		<path
-			d="M221.605,0h-31.913C123.743,0,72.083,53.745,72.083,122.356v171.306c0,68.618,51.66,122.369,117.609,122.369h31.913
+		<i class="fa-solid fa-gear"></i>
+		<span class="text-[15px]">Adjust settings</span>
+		<button
+			aria-label="Toggle description"
+			class="text-white absolute right-3 animate {closed ? '' : 'rotate-180'}"
+			onclick={() => (closed = !closed)}
+		>
+			<i class="fa-solid fa-angle-down text-[15px]"></i>
+		</button>
+	</div>
+	<div style="padding:{closed ? '0' : '10px 20px'}" class="options none flex-col gap-3 {closed? "opacity-0": "opacity-100"} {closed?"height-0": "height-auto"}">
+		<div class="opt1 gap-3 {closed?"hidden": "flex"} items-center">
+			<input type="checkbox" name="" id="" bind:checked={useYswsColor}/><span>Color By YSWS</span>
+		</div>
+				<div class="opt1 gap-3 {closed?"hidden": "flex"} items-center">
+			<input type="checkbox" name="" id="" bind:checked={lightMode}/><span>Light Mode</span>
+		</div>
+	</div>
+</div>
+<NodeOverlay hoveredNode={$hoveredNode} {lightMode} {toggleLightMode} />
+<div class="bottom-5 absolute w-full flex items-center justify-center text-gray-400">
+	<div class="controls h-10 items-center gap-2 flex">
+		<svg
+			class="size-[clamp(20px,2vw,40px)]"
+			version="1.1"
+			id="Capa_1"
+			xmlns="http://www.w3.org/2000/svg"
+			xmlns:xlink="http://www.w3.org/1999/xlink"
+			x="0px"
+			y="0px"
+			viewBox="0 0 416.031 416.031"
+			style="enable-background:new 0 0 416.031 416.031;"
+			xml:space="preserve"
+		>
+			<path
+				d="M221.605,0h-31.913C123.743,0,72.083,53.745,72.083,122.356v171.306c0,68.618,51.66,122.369,117.609,122.369h31.913
 	c67.46,0,122.343-54.894,122.343-122.369V122.356C343.948,54.889,289.065,0,221.605,0z M206.781,64.12h2.469c3.859,0,7,3.14,7,7
 	v49.833c0,3.86-3.141,7-7,7h-2.469c-3.859,0-7-3.14-7-7V71.12C199.781,67.26,202.922,64.12,206.781,64.12z M327.948,293.662
 	c0,58.652-47.705,106.369-106.343,106.369h-31.913c-56.978,0-101.609-46.723-101.609-106.369V122.356
 	C88.083,62.718,132.715,16,189.692,16h10.225v33.167c-9.34,2.927-16.136,11.661-16.136,21.954v49.833
 	c0,10.292,6.796,19.027,16.136,21.953v41.166c0,4.418,3.582,8,8,8s8-3.582,8-8v-41.108c9.441-2.865,16.333-11.647,16.333-22.011
 	V71.12c0-10.364-6.892-19.146-16.333-22.012V16h5.688c58.638,0,106.343,47.711,106.343,106.356V293.662z"
-			fill="#99a1af"
-		/>
-	</svg> <span class="">Use Scrollwheel to Zoom, Drag to Move Around </span>
-</div>
+				fill="#99a1af"
+			/>
+		</svg> <span class="">Use Scrollwheel to Zoom, Drag to Move Around </span>
+	</div>
 </div>
 
 <style>
+.loader{
+	animation: spin 1s linear infinite;
+}
+@keyframes spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
 	* {
 		padding: 0;
 		margin: 0;
@@ -505,5 +550,17 @@
 
 	#myCanvas:active {
 		cursor: grabbing;
+	}
+	.filter-bar {
+		padding: 10px 20px;
+		padding-right: 70px;
+	}
+	.options {
+		padding-left: 20px;
+		transition: all 0.3s ease;
+	}
+	.animate{
+		transition: all 0.3s ease;
+
 	}
 </style>
