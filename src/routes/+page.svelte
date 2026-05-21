@@ -477,20 +477,21 @@
 		? 'text-gray-800'
 		: 'text-white'} cursor-pointer {lightMode ? 'bg-gray-200' : 'bg-black'}  border"
 >
-	<div
+	<button
+	onclick={() => (closed = !closed)}
 		class="filter-bar relative h-12  items-center justify-center flex text-xl gap-2
 		{lightMode ? 'border-black' : 'border-gray-600'} border-b"
 	>
 		<i class="fa-solid fa-gear"></i>
 		<span class="text-[15px]">Adjust settings</span>
-		<button
+		<div
 			aria-label="Toggle description"
 			class="text-white absolute right-3 animate {closed ? '' : 'rotate-180'}"
-			onclick={() => (closed = !closed)}
+			
 		>
 			<i class="fa-solid fa-angle-down text-[15px]"></i>
-		</button>
-	</div>
+</div>
+</button>
 	<div style="padding:{closed ? '0' : '10px 20px'}" class="options none flex-col gap-3 {closed? "opacity-0": "opacity-100"} {closed?"height-0": "height-auto"}">
 		<div class="opt1 gap-3 {closed?"hidden": "flex"} items-center">
 			<input type="checkbox" name="" id="" bind:checked={useYswsColor}/><span>Color By YSWS</span>
