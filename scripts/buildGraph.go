@@ -40,8 +40,8 @@ type Range struct {
 }
 
 const (
-	defaultThreshold    = 0.3
-	defaultMaxNeighbors = 20
+	defaultThreshold    = 0.55
+	defaultMaxNeighbors = 7
 	defaultChunkSize    = 250
 )
 
@@ -50,8 +50,8 @@ func defaultConcurrency() int {
 	if cpu < 1 {
 		return 1
 	}
-	if cpu > 6 {
-		return 6
+	if cpu > 8 {
+		return 8
 	}
 	return cpu
 }
@@ -289,6 +289,82 @@ func main() {
 		degree[edge.A] = da + 1
 		degree[edge.B] = db + 1
 	}
+
+	orphans := make([]int, 0)
+	for i := 0; i < total; i++ {
+		if degree[i] == 0 {
+			orphans = append(orphans, i)
+		}
+	}
+
+	orphanEdges := make([]Candidate, 0, len(orphans))
+	if total > 1 && len(orphans) > 0 {
+		orphanJobs := make(chan int)
+		orphanResults := make(chan Candidate)
+		var orphanDone uint64
+
+		var orphanWg sync.WaitGroup
+		for i := 0; i < concurrency; i++ {
+			orphanWg.Add(1)
+			go func() {
+				defer orphanWg.Done()
+				for idx := range orphanJobs {
+					bestIdx := -1
+					bestWeight := -2.0
+					for j := 0; j < total; j++ {
+						if idx == j {
+							continue
+						}
+						similarity := dot(vectors[idx], vectors[j])
+						if similarity > bestWeight {
+							bestWeight = similarity
+							bestIdx = j
+						}
+					}
+					if bestIdx >= 0 {
+						// Ensure orphans get at least one edge, even if the neighbor is at capacity.
+						orphanResults <- Candidate{A: idx, B: bestIdx, Weight: bestWeight}
+					}
+					atomic.AddUint64(&orphanDone, 1)
+				}
+			}()
+		}
+
+		go func() {
+			orphanWg.Wait()
+			close(orphanResults)
+		}()
+
+		go func() {
+			for _, idx := range orphans {
+				orphanJobs <- idx
+			}
+			close(orphanJobs)
+		}()
+
+		orphanProgressDone := make(chan struct{})
+		go func() {
+			ticker := time.NewTicker(3 * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-orphanProgressDone:
+					return
+				case <-ticker.C:
+					current := atomic.LoadUint64(&orphanDone)
+					percent := float64(current) / float64(len(orphans)) * 100
+					fmt.Printf("Orphan pass: %.2f%% (%d/%d)\n", percent, current, len(orphans))
+				}
+			}
+		}()
+
+		for edge := range orphanResults {
+			orphanEdges = append(orphanEdges, edge)
+		}
+		close(orphanProgressDone)
+	}
+
+	selected = append(selected, orphanEdges...)
 
 	for _, edge := range selected {
 		a := ids[edge.A]

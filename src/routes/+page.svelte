@@ -353,7 +353,7 @@
 			const fitScale = Math.min(width / boundsWidth, height / boundsHeight);
 			minScale = fitScale;
 
-			scale = minScale + 0.05;
+			scale = minScale;
 			const extraX = width / scale - boundsWidth;
 			const extraY = height / scale - boundsHeight;
 			offsetX = -worldBounds.minX + extraX / 2;
