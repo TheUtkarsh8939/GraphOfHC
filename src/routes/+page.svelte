@@ -274,7 +274,7 @@
 			const pos = screenPosByNode.get(n.id);
 			if (!pos) continue;
 			const [sx, sy] = pos;
-			const r = Math.max(1, n.radius) * scale * 10;
+			const r = Math.max(1, n.radius ) * scale *10 ;
 			ctx.beginPath();
 			ctx.fillStyle = useYswsColor ? COLORS[n.ysws] || '#6b7280' : colorlist[(n.radius * 200) % colorlist.length];
 			ctx.arc(sx, sy, r, 0, Math.PI * 2);

@@ -81,7 +81,7 @@ const clamp = (value: number, min: number, max: number): number => {
 const computeRadius = (hours: number, radiusScale: number): number => {
   const safeHours = Math.max(0, hours);
   // log1p keeps 0-hour nodes valid while preserving logarithmic growth.
-  return round(Math.log1p(safeHours) * radiusScale, 2);
+  return round(Math.pow(safeHours, 0.6)/4.84 * radiusScale, 2);
 };
 
 const phyllotaxisLayout = (
