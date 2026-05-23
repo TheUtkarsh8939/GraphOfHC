@@ -463,6 +463,12 @@
 		lightMode = !lightMode;
 		scheduleDraw();
 	}
+	$effect(() => {
+		console.log('Light mode changed:', lightMode);
+		console.log('Color By Ysws:', useYswsColor);
+
+		scheduleDraw();
+	});
 	let closed = $state(true);
 </script>
 {#if loading}

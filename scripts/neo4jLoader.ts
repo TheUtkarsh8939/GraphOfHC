@@ -152,7 +152,7 @@ const main = async (): Promise<void> => {
     await connect();
 
     // Load data
-    const graphPath = path.join(__dirname, "render-graph.json");
+    const graphPath = path.join(__dirname, "..","generated","dense-render-graph.json");
 
     const graphRaw = fs.readFileSync(graphPath, "utf-8");
     const graph: RenderGraph = JSON.parse(graphRaw);
