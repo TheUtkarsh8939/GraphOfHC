@@ -112,7 +112,7 @@
 
 	let scale = 10;
 	let minScale = 0.5;
-	const maxScale = 6;
+	const maxScale = 12;
 
 	let offsetX = 0; // world translation
 	let offsetY = 0;
@@ -140,7 +140,7 @@
 		{ scale: 1.7, edges: 50, hoursThreshold: 4 },
 		{ scale: 2.0, edges: 100, hoursThreshold: 0 },
 
-		{ scale: Infinity, edges: 100, hoursThreshold: 0 }
+		{ scale: Infinity, edges: 10000, hoursThreshold: 0 }
 	];
 
 	const getLod = (s: number) => {
