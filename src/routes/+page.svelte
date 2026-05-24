@@ -157,7 +157,7 @@
 		return Math.min(max, Math.max(min, value));
 	};
 
-	let RENDER_GRAPH_URL = $derived(useAlternateFile? "render-graph-alternate.json":"/render-graph.json");
+	let RENDER_GRAPH_URL = $derived(useAlternateFile? "/render-graph-alternate.json":"/render-graph.json");
 
 	let nodes: Node[] = [];
 	let edges: RenderEdge[] = [];
