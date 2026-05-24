@@ -135,10 +135,10 @@
 	const hoverScreenY = writable(0);
 
 	const LOD_EDGE_MAP = [
-		{ scale: 1.0, edges: 5, hoursThreshold: 60 },
-		{ scale: 1.2, edges: 20, hoursThreshold: 20 },
-		{ scale: 2.5, edges: 50, hoursThreshold: 4 },
-		{ scale: 3.2, edges: 50, hoursThreshold: 0 },
+		{ scale: 1.0, edges: 5, hoursThreshold: 30 },
+		{ scale: 1.2, edges: 20, hoursThreshold: 10 },
+		{ scale: 1.7, edges: 50, hoursThreshold: 4 },
+		{ scale: 2.0, edges: 50, hoursThreshold: 0 },
 
 		{ scale: Infinity, edges: 100, hoursThreshold: 0 }
 	];
