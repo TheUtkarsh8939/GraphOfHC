@@ -78,7 +78,10 @@ const clamp = (value: number, min: number, max: number): number => {
   return Math.min(max, Math.max(min, value));
 };
 
-const computeRadius = (hours: number, radiusScale: number): number => {
+const computeRadius = (hours: number | "null", radiusScale: number): number => {
+  if (hours === "null") {
+    return 0.2;
+  }
   const safeHours = Math.max(0, hours);
   // log1p keeps 0-hour nodes valid while preserving logarithmic growth.
   return round(Math.pow(safeHours, 0.6)/4.84 * radiusScale, 2);

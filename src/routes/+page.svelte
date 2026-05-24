@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import NodeOverlay from '$lib/NodeOverlay.svelte';
-	let useYswsColor = $state(false);
+	import { Slider } from '$lib/components/ui/slider/index.js';
 	let loading = $state(true);
 	import { COLORS } from '$lib/colors';
 	let colorlist = [
@@ -82,7 +82,7 @@
 		code_url: string;
 		description: string;
 		demo_url: string;
-		hours: number;
+		hours: number | string;
 		name: string;
 		x: number;
 		y: number;
@@ -120,7 +120,15 @@
 	let isPanning = false;
 	let lastPanX = 0;
 	let lastPanY = 0;
+
+	//Customization options
 	let lightMode = $state(false);
+	let useYswsColor = $state(false);
+	let edgeWeight = $state(0.3);
+	let nodeSize = $state(6);
+	let disableLod = $state(false);
+	let useAlternateFile = $state(false);
+
 	import { writable, get } from 'svelte/store';
 	const hoveredNode = writable<Node | null>(null);
 	const hoverScreenX = writable(0);
@@ -136,6 +144,9 @@
 	];
 
 	const getLod = (s: number) => {
+		if (disableLod) {
+			return { scale: Infinity, edges: 100, hoursThreshold: 0 };
+		}
 		for (const entry of LOD_EDGE_MAP) {
 			if (s <= entry.scale) return entry;
 		}
@@ -146,7 +157,7 @@
 		return Math.min(max, Math.max(min, value));
 	};
 
-	const RENDER_GRAPH_URL = '/render-graph.json';
+	let RENDER_GRAPH_URL = $derived(useAlternateFile? "render-graph-alternate.json":"/render-graph.json");
 
 	let nodes: Node[] = [];
 	let edges: RenderEdge[] = [];
@@ -206,6 +217,41 @@
 		return [sx / scale - offsetX, sy / scale - offsetY];
 	};
 
+	const getNumericHours = (node: Node): number => {
+		if (node.hours === 'null' || (typeof node.hours === 'string' && node.hours.includes('null'))) {
+			return 1;
+		}
+		return typeof node.hours === 'number' ? node.hours : Number(node.hours);
+	};
+
+	const findVisibleNodeAtScreen = (mx: number, my: number): Node | null => {
+		const lod = getLod(scale);
+		for (const n of nodes) {
+			const hours = getNumericHours(n);
+			if (hours < lod.hoursThreshold || !hours) continue;
+			const [sx, sy] = worldToScreen(n.x, n.y);
+			const drawRadius = Math.max(1, n.radius) * scale * nodeSize;
+			if (
+				sx + drawRadius < 0 ||
+				sx - drawRadius > width ||
+				sy + drawRadius < 0 ||
+				sy - drawRadius > height
+			) {
+				continue;
+			}
+			const dxs = mx - sx;
+			const dys = my - sy;
+			const distScreen = Math.sqrt(dxs * dxs + dys * dys);
+			const pickRadius = Math.max(6, Math.max(1, n.radius) * nodeSize * scale);
+			if (distScreen <= pickRadius) return n;
+		}
+		return null;
+	};
+
+	const nodeClicks = (node: Node) => {
+		node;
+	};
+
 	const draw = () => {
 		if (!ctx || !canvas) return;
 		const dpr = window.devicePixelRatio || 1;
@@ -220,14 +266,14 @@
 
 		// draw edges first (limited per-node by LOD)
 		ctx.lineWidth = Math.max(0.5, 1 * Math.min(1, scale));
-		ctx.strokeStyle = lightMode ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.3)';
 
 		const visibleNodes = new Set<string>();
 		const screenPosByNode = new Map<string, [number, number]>();
 		for (const n of nodes) {
-			if (n.hours < lod.hoursThreshold || !n.hours) continue;
+			const hours = getNumericHours(n);
+			if (hours < lod.hoursThreshold || !hours) continue;
 			const [sx, sy] = worldToScreen(n.x, n.y);
-			const drawRadius = Math.max(1, n.radius) * scale * 10;
+			const drawRadius = Math.max(0.2, n.radius) * scale * nodeSize;
 			if (
 				sx + drawRadius < 0 ||
 				sx - drawRadius > width ||
@@ -258,8 +304,12 @@
 				drawnPairs.add(pairKey);
 
 				const targetPos = screenPosByNode.get(neighbor.id);
+				const adjacencyWeight = neighbor.weight;
 				if (!targetPos) continue;
 				const [tx, ty] = targetPos;
+				ctx.strokeStyle = lightMode
+					? `rgba(0,0,0,${adjacencyWeight * edgeWeight})`
+					: `rgba(255,255,255,${adjacencyWeight * edgeWeight})`;
 
 				ctx.beginPath();
 				ctx.moveTo(sx, sy);
@@ -274,9 +324,12 @@
 			const pos = screenPosByNode.get(n.id);
 			if (!pos) continue;
 			const [sx, sy] = pos;
-			const r = Math.max(1, n.radius ) * scale *10 ;
+			const r = Math.max(0.2, n.radius) * scale * nodeSize;
 			ctx.beginPath();
-			ctx.fillStyle = useYswsColor ? COLORS[n.ysws] || '#6b7280' : colorlist[(n.radius * 200) % colorlist.length];
+			//@ts-expect-error
+			ctx.fillStyle = useYswsColor
+				? COLORS[n.ysws] || '#6b7280'
+				: colorlist[(n.radius * 200) % colorlist.length];
 			ctx.arc(sx, sy, r, 0, Math.PI * 2);
 			ctx.fill();
 		}
@@ -393,8 +446,15 @@
 			scheduleDraw();
 		};
 
+		let pointerMoved = false;
+		let pointerDownX = 0;
+		let pointerDownY = 0;
+
 		const onPointerDown = (e: PointerEvent) => {
 			isPanning = true;
+			pointerMoved = false;
+			pointerDownX = e.clientX;
+			pointerDownY = e.clientY;
 			lastPanX = e.clientX;
 			lastPanY = e.clientY;
 			canvasEl.setPointerCapture(e.pointerId);
@@ -408,6 +468,9 @@
 				offsetY += dy;
 				lastPanX = e.clientX;
 				lastPanY = e.clientY;
+				if (Math.hypot(e.clientX - pointerDownX, e.clientY - pointerDownY) > 4) {
+					pointerMoved = true;
+				}
 				scheduleDraw();
 			}
 
@@ -415,19 +478,7 @@
 			const rect = canvasEl.getBoundingClientRect();
 			const mx = e.clientX - rect.left;
 			const my = e.clientY - rect.top;
-			let found: Node | null = null;
-			// iterate nodes and check screen-space distance; stop at first hit
-			for (const n of nodes) {
-				const [sx, sy] = worldToScreen(n.x, n.y);
-				const dxs = mx - sx;
-				const dys = my - sy;
-				const distScreen = Math.sqrt(dxs * dxs + dys * dys);
-				const pickRadius = Math.max(6, Math.max(1, n.radius) * 10 * scale);
-				if (distScreen <= pickRadius) {
-					found = n;
-					break;
-				}
-			}
+			const found = findVisibleNodeAtScreen(mx, my);
 			hoveredNode.set(found);
 			hoverScreenX.set(mx);
 			hoverScreenY.set(my);
@@ -436,6 +487,13 @@
 
 		const onPointerUp = (e: PointerEvent) => {
 			isPanning = false;
+			if (!pointerMoved) {
+				const rect = canvasEl.getBoundingClientRect();
+				const mx = e.clientX - rect.left;
+				const my = e.clientY - rect.top;
+				const hit = findVisibleNodeAtScreen(mx, my);
+				if (hit) nodeClicks(hit);
+			}
 			try {
 				canvasEl.releasePointerCapture(e.pointerId);
 			} catch {}
@@ -446,7 +504,7 @@
 		canvasEl.addEventListener('pointermove', onPointerMove);
 		window.addEventListener('pointerup', onPointerUp);
 
-	loading=false
+		loading = false;
 		scheduleDraw();
 
 		onDestroy(() => {
@@ -457,7 +515,6 @@
 			window.removeEventListener('pointerup', onPointerUp);
 			if (raf) cancelAnimationFrame(raf);
 		});
-
 	});
 	function toggleLightMode() {
 		lightMode = !lightMode;
@@ -466,84 +523,133 @@
 	$effect(() => {
 		console.log('Light mode changed:', lightMode);
 		console.log('Color By Ysws:', useYswsColor);
-
+		console.log('Edge Weight:', edgeWeight);
+		console.log('Node Size:', nodeSize);
+		console.log('Disable LOD:', disableLod);
 		scheduleDraw();
 	});
+	$effect(()=> {
+		console.log('Use Alternate File:', useAlternateFile);
+		loading = true;
+		loadRenderData().then(() => {loading = false;
+		scheduleDraw();}).catch((err) => {
+			console.error('Error loading render data:', err);
+			loading = false;
+		});
+		
+	})
 	let closed = $state(true);
 </script>
-{#if loading}
-<div class="absolute flex items-center justify-center h-screen w-screen bg-black text-white p-0 z-500 flex-col gap-4">
-	<div class="size-20 border-3 border-gray-600 border-t-white rounded-full loader"></div>
-	<span>Loading the constellation..</span>
-</div>
-{/if}
-<canvas bind:this={canvas} id="myCanvas" style="background:{lightMode ? '#ffffff' : '#000000'}; display:block"></canvas>
-<div
-	class="filter absolute top-4 left-12 {lightMode ? 'border-black' : 'border-gray-600'} rounded-sm z-10  {lightMode
-		? 'text-gray-800'
-		: 'text-white'} cursor-pointer {lightMode ? 'bg-gray-200' : 'bg-black'}  border"
->
-	<button
-	onclick={() => (closed = !closed)}
-		class="filter-bar relative h-12  items-center justify-center flex text-xl gap-2
-		{lightMode ? 'border-black' : 'border-gray-600'} border-b"
-	>
-		<i class="fa-solid fa-gear"></i>
-		<span class="text-[15px]">Adjust settings</span>
+
+<div class="screen {lightMode ? '' : 'dark'}">
+	{#if loading}
 		<div
-			aria-label="Toggle description"
-			class="text-white absolute right-3 animate {closed ? '' : 'rotate-180'}"
-			
+			class="absolute flex items-center justify-center h-screen w-screen bg-black text-white p-0 z-500 flex-col gap-4"
 		>
-			<i class="fa-solid fa-angle-down text-[15px]"></i>
-</div>
-</button>
-	<div style="padding:{closed ? '0' : '10px 20px'}" class="options none flex-col gap-3 {closed? "opacity-0": "opacity-100"} {closed?"height-0": "height-auto"}">
-		<div class="opt1 gap-3 {closed?"hidden": "flex"} items-center">
-			<input type="checkbox" name="" id="" bind:checked={useYswsColor}/><span>Color By YSWS</span>
+			<div class="size-20 border-3 border-gray-600 border-t-white rounded-full loader"></div>
+			<span>Loading the constellation..</span>
 		</div>
-				<div class="opt1 gap-3 {closed?"hidden": "flex"} items-center">
-			<input type="checkbox" name="" id="" bind:checked={lightMode}/><span>Light Mode</span>
+	{/if}
+	<canvas
+		bind:this={canvas}
+		id="myCanvas"
+		style="background:{lightMode ? '#ffffff' : '#000000'}; display:block"
+	></canvas>
+	<div
+		class="filter absolute top-4 left-4 {lightMode
+			? 'border-black'
+			: 'border-gray-600'} rounded-sm z-10 {lightMode
+			? 'text-gray-800'
+			: 'text-white'} cursor-pointer {lightMode ? 'bg-gray-200' : 'bg-black'}  border"
+	>
+		<button
+			onclick={() => (closed = !closed)}
+			class="filter-bar relative h-12 items-center justify-center flex text-xl gap-2
+		{lightMode ? 'border-black' : 'border-gray-600'} border-b"
+		>
+			<i class="fa-solid fa-gear"></i>
+			<span class="text-[15px]">Adjust settings</span>
+			<div
+				aria-label="Toggle description"
+				class="text-white absolute right-3 animate {closed ? '' : 'rotate-180'}"
+			>
+				<i class="fa-solid fa-angle-down text-[15px]"></i>
+			</div>
+		</button>
+		<div
+			style="padding:{closed ? '0' : '10px 20px'}"
+			class="options none flex-col gap-3 {closed ? 'opacity-0' : 'opacity-100'} {closed
+				? 'height-0'
+				: 'height-auto'}"
+		>
+			<div class="opt1 gap-3 {closed ? 'hidden' : 'flex'} items-center">
+				<input type="checkbox" name="" id="" bind:checked={useYswsColor} /><span>Color By YSWS</span
+				>
+			</div>
+			<div class="opt2 gap-3 {closed ? 'hidden' : 'flex'} items-center">
+				<input type="checkbox" name="" id="" bind:checked={lightMode} /><span>Light Mode</span>
+			</div>
+			<br class={closed ? 'hidden' : 'flex'} />
+			<div class="opt3 {closed ? 'hidden' : 'flex'} flex-col h-10 flex justify-start">
+				<div>Node Size:</div>
+				<Slider type="single" bind:value={nodeSize} max={20} min={1} step={1} class="w-full" />
+			</div>
+			<div class="opt3 {closed ? 'hidden' : 'flex'} flex-col h-10 flex justify-start">
+				<div>Edge Weight:</div>
+				<Slider type="single" bind:value={edgeWeight} max={1} step={0.1} class="w-full" />
+			</div>
+			<br class={closed ? 'hidden' : 'flex'} />
+
+			<div class="opt2 gap-3 {closed ? 'hidden' : 'flex'} items-center">
+				<input type="checkbox" name="" id="" bind:checked={disableLod} /><span>Disable LOD</span>
+			</div>
+			<div class="opt2 gap-3 {closed ? 'hidden' : 'flex'} items-center">
+				<input type="checkbox" name="" id="" bind:checked={useAlternateFile} /><span>Use Alternate File</span>
+			</div>
 		</div>
 	</div>
-</div>
-<NodeOverlay hoveredNode={$hoveredNode} {lightMode} {toggleLightMode} />
-<div class="bottom-5 absolute w-full flex items-center justify-center text-gray-400">
-	<div class="controls h-10 items-center gap-2 flex">
-		<svg
-			class="size-[clamp(20px,2vw,40px)]"
-			version="1.1"
-			id="Capa_1"
-			xmlns="http://www.w3.org/2000/svg"
-			xmlns:xlink="http://www.w3.org/1999/xlink"
-			x="0px"
-			y="0px"
-			viewBox="0 0 416.031 416.031"
-			style="enable-background:new 0 0 416.031 416.031;"
-			xml:space="preserve"
-		>
-			<path
-				d="M221.605,0h-31.913C123.743,0,72.083,53.745,72.083,122.356v171.306c0,68.618,51.66,122.369,117.609,122.369h31.913
+	<NodeOverlay hoveredNode={$hoveredNode} {lightMode} {toggleLightMode} />
+	<div class="bottom-5 absolute w-full flex items-center justify-center text-gray-400">
+		<div class="controls h-10 items-center gap-2 flex">
+			<svg
+				class="size-[clamp(20px,2vw,40px)]"
+				version="1.1"
+				id="Capa_1"
+				xmlns="http://www.w3.org/2000/svg"
+				xmlns:xlink="http://www.w3.org/1999/xlink"
+				x="0px"
+				y="0px"
+				viewBox="0 0 416.031 416.031"
+				style="enable-background:new 0 0 416.031 416.031;"
+				xml:space="preserve"
+			>
+				<path
+					d="M221.605,0h-31.913C123.743,0,72.083,53.745,72.083,122.356v171.306c0,68.618,51.66,122.369,117.609,122.369h31.913
 	c67.46,0,122.343-54.894,122.343-122.369V122.356C343.948,54.889,289.065,0,221.605,0z M206.781,64.12h2.469c3.859,0,7,3.14,7,7
 	v49.833c0,3.86-3.141,7-7,7h-2.469c-3.859,0-7-3.14-7-7V71.12C199.781,67.26,202.922,64.12,206.781,64.12z M327.948,293.662
 	c0,58.652-47.705,106.369-106.343,106.369h-31.913c-56.978,0-101.609-46.723-101.609-106.369V122.356
 	C88.083,62.718,132.715,16,189.692,16h10.225v33.167c-9.34,2.927-16.136,11.661-16.136,21.954v49.833
 	c0,10.292,6.796,19.027,16.136,21.953v41.166c0,4.418,3.582,8,8,8s8-3.582,8-8v-41.108c9.441-2.865,16.333-11.647,16.333-22.011
 	V71.12c0-10.364-6.892-19.146-16.333-22.012V16h5.688c58.638,0,106.343,47.711,106.343,106.356V293.662z"
-				fill="#99a1af"
-			/>
-		</svg> <span class="">Use Scrollwheel to Zoom, Drag to Move Around </span>
+					fill="#99a1af"
+				/>
+			</svg> <span class="">Use Scrollwheel to Zoom, Drag to Move Around </span>
+		</div>
 	</div>
 </div>
 
 <style>
-.loader{
-	animation: spin 1s linear infinite;
-}
-@keyframes spin {
-	0% { transform: rotate(0deg); }
-	100% { transform: rotate(360deg); }
-}
+	.loader {
+		animation: spin 1s linear infinite;
+	}
+	@keyframes spin {
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
+	}
 	* {
 		padding: 0;
 		margin: 0;
@@ -560,14 +666,13 @@
 	}
 	.filter-bar {
 		padding: 10px 20px;
-		padding-right: 70px;
+		padding-right: 120px;
 	}
 	.options {
 		padding-left: 20px;
 		transition: all 0.3s ease;
 	}
-	.animate{
+	.animate {
 		transition: all 0.3s ease;
-
 	}
 </style>
