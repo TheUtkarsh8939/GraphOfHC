@@ -21,6 +21,7 @@
 		"@sveltejs/adapter-auto": "^7.0.1",
 		"@sveltejs/kit": "^2.57.0",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
+		"@types/node": "^25.9.1",
 		"bits-ui": "^2.18.1",
 		"clsx": "^2.1.1",
 		"prettier": "^3.8.1",
@@ -37,10 +38,12 @@
 	},
 	"dependencies": {
 		"@tailwindcss/vite": "^4.3.0",
-		"@types/node": "^25.9.1",
 		"@vercel/analytics": "^2.0.1",
 		"dompurify": "^3.4.5",
 		"dotenv": "^17.4.2",
+		"graphology": "^0.26.0",
+		"graphology-layout-force": "^0.2.4",
+		"graphology-layout-forceatlas2": "^0.10.1",
 		"tailwindcss": "^4.3.0"
 	}
 }

@@ -165,7 +165,7 @@
 	let adjacency = new Map<string, Array<{ id: string; weight: number }>>();
 	let worldBounds: { minX: number; maxX: number; minY: number; maxY: number } | null = null;
 	let hasFitToScreen = false;
-
+	let lock = false;
 	const computeWorldBounds = (items: Node[]) => {
 		if (items.length === 0) return null;
 		let minX = Number.POSITIVE_INFINITY;
@@ -249,7 +249,8 @@
 	};
 
 	const nodeClicks = (node: Node) => {
-		node;
+		console.log('Node clicked:', node);
+		lock = !lock;
 	};
 
 	const draw = () => {
@@ -479,9 +480,12 @@
 			const mx = e.clientX - rect.left;
 			const my = e.clientY - rect.top;
 			const found = findVisibleNodeAtScreen(mx, my);
-			hoveredNode.set(found);
+			//Lock Hover when a node is clicked
+			if (!lock){
+				hoveredNode.set(found);
 			hoverScreenX.set(mx);
 			hoverScreenY.set(my);
+			}
 			scheduleDraw();
 		};
 
