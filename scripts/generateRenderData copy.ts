@@ -55,11 +55,9 @@ const DEFAULT_RADIUS_SCALE = 1.3;
 const DEFAULT_SPACING = 1.2;
 const DEFAULT_LAYOUT_MODE = "force";
 const DEFAULT_LAYOUT_ITERATIONS = 180;
-const DEFAULT_LAYOUT_SEED = 2702;
+const DEFAULT_LAYOUT_SEED = 42;
 const DEFAULT_REPULSION_SAMPLES = 10;
-const DEFAULT_REPULSION_SCALE = 1;
-const DEFAULT_INWARD_GRAVITY = 0.4;
-const DEFAULT_EDGE_PULL = 0.0;
+
 const getArgValue = (name: string): string | undefined => {
   const prefix = `--${name}=`;
   const arg = process.argv.find((value) => value.startsWith(prefix));
@@ -170,9 +168,7 @@ const forceDirectedLayout = (
   seed: number,
   repulsionSamples: number,
   spacing: number,
-  edgePull: number,
-  repulsionScale: number,
-  inwardGravity: number
+  edgePull: number
 ): Map<string, { x: number; y: number }> => {
   const count = nodeIds.length;
   const result = new Map<string, { x: number; y: number }>();
@@ -260,7 +256,7 @@ const forceDirectedLayout = (
         }
 
         const dist = Math.sqrt(distSq);
-        const force = ((k * k) / Math.max(dist, 0.01)) * repulsionScale;
+        const force = (k * k) / Math.max(dist, 0.01);
         const ux = dx / dist;
         const uy = dy / dist;
 
@@ -296,28 +292,14 @@ const forceDirectedLayout = (
     const centerY = height / 2;
     const maxRadius = Math.max(1, Math.min(usableWidth, usableHeight) / 2);
     const tunedEdgePull = edgePull;
-    const tunedInwardGravity = inwardGravity;
     for (let i = 0; i < count; i += 1) {
-      // Degree-aware scaling: reduce outward pull for low-degree nodes and
-      // increase inward gravity for isolates so pairs / singletons don't drift to bounds.
-      const degreeAlpha = 1; // smoothing factor — higher makes degree effect gentler
       const dx = positions[i].x - centerX;
       const dy = positions[i].y - centerY;
       const dist = Math.max(0.001, Math.sqrt(dx * dx + dy * dy));
       const normalized = clamp(dist / maxRadius, 0, 1);
-
-      // degreeFactor in [0,1], near 0 for isolates, near 1 for hubs
-      const degree = weightedDegrees[i] ?? 0;
-      const degreeFactor = degree / (degree + degreeAlpha);
-
-      let outwardForce = tunedEdgePull * normalized * normalized * degreeFactor;
-      dispX[i] += (dx / dist) * outwardForce;
-      dispY[i] += (dy / dist) * outwardForce;
-
-      // inward gravity applies stronger to low-degree nodes (1 - degreeFactor)
-      const inwardForce = tunedInwardGravity * normalized * (1 - degreeFactor);
-      dispX[i] -= (dx / dist) * inwardForce;
-      dispY[i] -= (dy / dist) * inwardForce;
+      const force = tunedEdgePull * normalized * normalized;
+      dispX[i] += (dx / dist) * force;
+      dispY[i] += (dy / dist) * force;
     }
 
     const progress = iter / Math.max(1, iterations - 1);
@@ -365,9 +347,7 @@ const main = (): void => {
     2,
     Math.floor(toNumber(getArgValue("repulsionSamples"), DEFAULT_REPULSION_SAMPLES))
   );
-  const repulsionScale = Math.max(0, toNumber(getArgValue("repulsionScale"), DEFAULT_REPULSION_SCALE));
-  const inwardGravity = Math.max(0, toNumber(getArgValue("inwardGravity"), DEFAULT_INWARD_GRAVITY));
-  const edgePull = Math.max(0, toNumber(getArgValue("edgePull"),DEFAULT_EDGE_PULL));
+  const edgePull = Math.max(0, toNumber(getArgValue("edgePull"), 0.0035));
   const maxNeighbors = Math.max(1, Math.floor(toNumber(getArgValue("maxNeighbors"), 20)));
 
   if (width <= 0 || height <= 0) {
@@ -413,9 +393,7 @@ const main = (): void => {
           layoutSeed,
           repulsionSamples,
           spacing,
-          edgePull,
-          repulsionScale,
-          inwardGravity
+          edgePull
         )
       : new Map<string, { x: number; y: number }>();
 

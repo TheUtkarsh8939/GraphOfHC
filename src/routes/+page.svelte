@@ -221,7 +221,7 @@
 		if (node.hours === 'null' || (typeof node.hours === 'string' && node.hours.includes('null'))) {
 			return 1;
 		}
-		return typeof node.hours === 'number' ? node.hours : Number(node.hours);
+		return typeof node.hours === 'number' ? node.hours : 1;
 	};
 
 	const findVisibleNodeAtScreen = (mx: number, my: number): Node | null => {
